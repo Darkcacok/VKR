@@ -22,16 +22,32 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-CONFIG += c++11
+#CONFIG += c++11
+QMAKE_CXXFLAGS += -std=c++11
 
 SOURCES += \
+        dir.cpp \
+        file.cpp \
+        isofs.cpp \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+        node.cpp
 
 HEADERS += \
-        mainwindow.h
+        constants.h \
+        dir.h \
+        file.h \
+        isofs.h \
+        mainwindow.h \
+        node.h \
+    fs.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+unix:!macx: LIBS += -L$$PWD/../lib/libisofs/ -lisofs
+
+INCLUDEPATH += $$PWD/../lib/libisofs
+DEPENDPATH += $$PWD/../lib/libisofs

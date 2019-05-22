@@ -34,7 +34,7 @@ bool fs::Dir::findClone(fs::Node *node)
 {
     for(int i = 0; i < children.size(); ++i)
     {
-        if(this->getType() == node->getType() && !children[i]->getPath().compare(node->getPath()))
+        if(children[i]->getType() == node->getType() && !children[i]->getPath().compare(node->getPath()))
             return true;
     }
 

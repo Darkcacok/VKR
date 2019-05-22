@@ -31,7 +31,8 @@ SOURCES += \
         isofs.cpp \
         main.cpp \
         mainwindow.cpp \
-        node.cpp
+        node.cpp \
+    createimage.cpp
 
 HEADERS += \
         constants.h \
@@ -40,7 +41,8 @@ HEADERS += \
         isofs.h \
         mainwindow.h \
         node.h \
-    fs.h
+    fs.h \
+    createimage.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -51,3 +53,5 @@ unix:!macx: LIBS += -L$$PWD/../lib/libisofs/ -lisofs
 
 INCLUDEPATH += $$PWD/../lib/libisofs
 DEPENDPATH += $$PWD/../lib/libisofs
+
+FORMS +=

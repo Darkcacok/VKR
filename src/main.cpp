@@ -1,5 +1,7 @@
 #include "mainwindow.h"
+#include "createimage.h"
 #include <QApplication>
+#include <QTextCodec>
 #include "../lib/libisofs/libisofs.h"
 #include "file.h"
 #include "dir.h"
@@ -15,6 +17,11 @@ void progress(float p)
 
 int main(int argc, char *argv[])
 {
+    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
+    QTextCodec::setCodecForTr(codec);
+    QTextCodec::setCodecForCStrings(codec);
+    QTextCodec::setCodecForLocale(codec);
+
     QApplication a(argc, argv);
 
     /*if(iso_init()< 0)
@@ -30,7 +37,7 @@ int main(int argc, char *argv[])
     idir = iso_image_get_root(image);*/
 
 
-    fs::File *file = new  fs::File(std::string("/home/user/army2018.tar.gz"));
+    /*fs::File *file = new  fs::File(std::string("/home/user/army2018.tar.gz"));
     std::string name = file->getName();
     fs::Dir *dir = new fs::Dir(std::string("/home/user/Diplom"));
     fs::Dir *dir2 = new fs::Dir(std::string("/home/user/Diplom"));
@@ -42,11 +49,11 @@ int main(int argc, char *argv[])
     IsoFS iso;
     iso.setExtnsnRockRidge();
     iso.CreateImage(dir, std::string("test"));
-    iso.writeImage(std::string("/home/user/test.iso"), progress);
+    iso.writeImage(std::string("/home/user/test.iso"), progress);*/
 
 
 
-    MainWindow w;
+    CreateImage w;
     w.show();
 
     return a.exec();

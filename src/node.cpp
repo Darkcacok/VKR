@@ -31,22 +31,17 @@ fs::Node::Node(const std::string &path)
         throw "error stat()";
     }
 
-    if(S_ISREG(st.st_mode))
+    switch(st.st_mode & S_IFMT)
     {
+    case S_IFREG:
         this->type = NodeType::ISO_FILE;
-        return;
-    }
-
-    if(S_ISDIR(st.st_mode))
-    {
+        break;
+    case S_IFDIR:
         this->type = NodeType::ISO_DIR;
-        return;
-    }
-
-    if(S_ISLNK(st.st_mode))
-    {
+        break;
+    case S_IFLNK:
         this->type = NodeType::ISO_SYMLINK;
-        return;
+        break;
     }
 }
 

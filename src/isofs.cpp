@@ -47,15 +47,19 @@ int IsoFS::CreateImage(fs::Dir *dir, const std::string name)
     for(int i = 0; i < dir->getSize(); ++i)
     {
         fs::Node *node = dir->getChild(i);
-        if(node->getType() == fs::NodeType::ISO_DIR)
+
+        switch(node->getType())
         {
+        case fs::NodeType::ISO_FILE:
+            iso_tree_add_node(m_image, iso_image_get_root(m_image), node->getPath().c_str(), NULL);
+            break;
+        case fs::NodeType::ISO_DIR:
             IsoDir *dir;
             iso_tree_add_new_dir(iso_image_get_root(m_image), node->getName().c_str(), &dir);
             //iso_image_add_new_dir(m_image, iso_image_get_root(m_image), node->getName().c_str(), &dir);
             iso_tree_add_dir_rec(m_image, dir, node->getPath().c_str());
+            break;
         }
-        if(node->getType() == fs::NodeType::ISO_FILE)
-            iso_tree_add_node(m_image, iso_image_get_root(m_image), node->getPath().c_str(), NULL);
     }
 
     return 1;

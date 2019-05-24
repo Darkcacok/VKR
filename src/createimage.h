@@ -27,8 +27,6 @@ private:
 
     fs::Dir *m_root;
 
-    /********Window***********/
-    QWidget *window;
 
     /******Layout************/
     QVBoxLayout *v_layout;
@@ -53,6 +51,7 @@ private:
 
     /*************Functions******************/
     int createWindow();
+    QTreeWidgetItem *addItem(fs::Node *node);
 
 
 private slots:

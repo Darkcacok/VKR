@@ -35,12 +35,30 @@ fs::Node::Node(const std::string &path)
     {
     case S_IFREG:
         this->type = NodeType::ISO_FILE;
+        this->size = st.st_size;
         break;
     case S_IFDIR:
         this->type = NodeType::ISO_DIR;
+
+        struct dirent *entry;
+        DIR *dir;
+
+        dir = opendir(path.c_str());
+
+        this->size = 0;
+        while((entry = readdir(dir)) != NULL)
+        {
+            ++this->size;
+        }
+
+        this->size -= 2;
+
+        closedir(dir);
+
         break;
     case S_IFLNK:
         this->type = NodeType::ISO_SYMLINK;
+        this->size = st.st_size;
         break;
     }
 }
@@ -63,6 +81,11 @@ std::string fs::Node::getPath()
 std::string fs::Node::getName()
 {
     return this->name;
+}
+
+int fs::Node::getSize()
+{
+    return size;
 }
 
 

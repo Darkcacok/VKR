@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <dirent.h>
 
 #include "constants.h"
 #include "node.h"

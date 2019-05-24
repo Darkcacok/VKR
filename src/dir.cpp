@@ -2,8 +2,14 @@
 
 fs::Dir::Dir(const std::string &path) : Node(path)
 {
-    //if(this->getType() != NodeType::ISO_DIR)
-        //throw "error";
+    if(this->getType() != NodeType::ISO_DIR)
+        throw "error";
+
+    struct dirent *entry;
+    struct DIR *dir;
+
+    dir = opendir(path.c_str());
+
 }
 
 int fs::Dir::addChild(fs::Node *node)

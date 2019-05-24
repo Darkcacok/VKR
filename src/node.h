@@ -4,6 +4,8 @@
 #include <string>
 #include <sys/stat.h>
 #include <vector>
+#include <dirent.h>
+#include <string.h>
 
 #include "constants.h"
 
@@ -23,6 +25,7 @@ public:
     NodeType getType();
     std::string getPath();
     std::string getName();
+    int getSize();
 
 protected:
     void setParent(Node *node);
@@ -30,6 +33,7 @@ protected:
 private:
     std::string path;
     std::string name;
+    int size;
     NodeType type;
     Dir *parent;
 

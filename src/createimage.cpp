@@ -14,7 +14,6 @@ CreateImage::~CreateImage()
 
 int CreateImage::createWindow()
 {
-    window = new QWidget(this);
 
     v_layout = new QVBoxLayout();
     h_layout_top = new QHBoxLayout();
@@ -51,8 +50,33 @@ int CreateImage::createWindow()
     v_layout->addWidget(nodes_view);
     v_layout->addLayout(h_layout_buttom);
 
-    window->setLayout(v_layout);
-    window->setWindowTitle("Созадние образа");
+
+    this->setWindowTitle("Созадние образа");
+    this->setLayout(v_layout);
+}
+
+QTreeWidgetItem *CreateImage::addItem(fs::Node *node)
+{
+    QTreeWidgetItem *item = new QTreeWidgetItem();
+
+    item->setText(0, QString(node->getName().c_str()));
+    switch (node->getType()) {
+    case fs::NodeType::ISO_FILE:
+        item->setText(1, "Файл");
+        item->setText(2, QString::number(node->getSize()) + QString(" байт"));
+        break;
+    case fs::NodeType::ISO_DIR:
+        item->setText(1, "Папка");
+         item->setText(2, QString::number(node->getSize()) + QString(" элементов"));
+         break;
+    case fs::NodeType::ISO_SYMLINK:
+        item->setText(1, "Ссылка");
+         item->setText(2, QString::number(node->getSize()) + QString(" байт"));
+         break;
+    }
+
+
+    return item;
 }
 
 int CreateImage::addFile()
@@ -63,7 +87,6 @@ int CreateImage::addFile()
     if(fileName.isEmpty())
         return -1;
 
-    QTreeWidgetItem *item = new QTreeWidgetItem();
     QTreeWidgetItem *curr_item = nodes_view->currentItem();
     if(curr_item == NULL)
     {
@@ -72,11 +95,7 @@ int CreateImage::addFile()
         if(m_root->addChild(file) < 0)
             return -1;
 
-        item->setText(0, QString(file->getName().c_str()));
-        item->setText(1, "FILE");
-        item->setText(2, "4354");
-
-        nodes_view->addTopLevelItem(item);
+        nodes_view->addTopLevelItem(addItem(file));
     }
     else
     {
@@ -86,11 +105,8 @@ int CreateImage::addFile()
             if(m_root->addChild(file) < 0)
                 return -1;
 
-            item->setText(0, QString(file->getName().c_str()));
-            item->setText(1, "FILE");
-            item->setText(2, "4354");
 
-            nodes_view->addTopLevelItem(item);
+            nodes_view->addTopLevelItem(addItem(file));
         }
         else
         {
@@ -111,18 +127,14 @@ int CreateImage::addDir()
         return -1;
 
     QTreeWidgetItem *curr_item = nodes_view->currentItem();
-    QTreeWidgetItem *item = new QTreeWidgetItem();
     fs::Dir *folder = new fs::Dir(dir.toStdString());
     if(curr_item == NULL)
     {
         if(m_root->addChild(folder) < 0)
             return -1;
 
-        item->setText(0, QString(folder->getName().c_str()));
-        item->setText(1, "DIR");
-        item->setText(2, "4354");
 
-        nodes_view->addTopLevelItem(item);
+        nodes_view->addTopLevelItem(addItem(folder));
     }
     else
     {

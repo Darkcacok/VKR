@@ -26,6 +26,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 QMAKE_CXXFLAGS += -std=c++11
 
 SOURCES += \
+    burn.cpp \
         dir.cpp \
         file.cpp \
         isofs.cpp \
@@ -35,6 +36,7 @@ SOURCES += \
     createimage.cpp
 
 HEADERS += \
+    burn.h \
         constants.h \
         dir.h \
         file.h \
@@ -55,3 +57,8 @@ INCLUDEPATH += $$PWD/../lib/libisofs
 DEPENDPATH += $$PWD/../lib/libisofs
 
 FORMS +=
+
+unix:!macx: LIBS += -L$$PWD/../lib/libburn/ -lburn
+
+INCLUDEPATH += $$PWD/../lib/libburn
+DEPENDPATH += $$PWD/../lib/libburn

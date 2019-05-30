@@ -5,7 +5,7 @@ CreateImage::CreateImage(QWidget *parent) :
 {
     createWindow();
 
-    m_root = new fs::Dir("/home/user");
+    m_root = new fs::Dir("root");
 }
 
 CreateImage::~CreateImage()
@@ -36,6 +36,8 @@ int CreateImage::createWindow()
 
     nodes_view->setColumnCount(column);
     nodes_view->setHeaderLabels(QStringList{"Название", "Тип", "Размер"});
+    nodes_view->viewport()->installEventFilter(this);
+    //connect(nodes_view, SIGNAL(itemSelectionChanged()), this, SLOT(change()));
 
 
     h_layout_top->addWidget(add_file);
@@ -79,6 +81,30 @@ QTreeWidgetItem *CreateImage::addItem(fs::Node *node)
     return item;
 }
 
+QTreeWidgetItem *CreateImage::addFile(fs::Dir *dir)
+{
+    QTreeWidgetItem *item = addItem(dir);
+    modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(item, dir));
+
+    for(int i = 0; i < dir->getSize(); ++i)
+    {
+        fs::Node *node = dir->getChild(i);
+        if(node->getType() == fs::ISO_DIR)
+        {
+            item->addChild(addFile((fs::Dir*)node));
+        }
+        else
+        {
+            QTreeWidgetItem *childItem = new QTreeWidgetItem();
+            childItem = addItem(node);
+            item->addChild(childItem);
+            modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(childItem, node));
+        }
+    }
+
+    return item;
+}
+
 int CreateImage::addFile()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Выбрать файл"), "/home/user");
@@ -95,26 +121,29 @@ int CreateImage::addFile()
         if(m_root->addChild(file) < 0)
             return -1;
 
-        nodes_view->addTopLevelItem(addItem(file));
+        QTreeWidgetItem *item = addItem(file);
+        modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(item, file));
+        nodes_view->addTopLevelItem(item);
     }
     else
     {
         fs::File *file = new fs::File(fileName.toStdString());
-        if(curr_item->parent() == NULL)
+        fs::Node *node = modelView[curr_item];
+
+        if(node->getType() != fs::ISO_DIR)
         {
-            if(m_root->addChild(file) < 0)
-                return -1;
-
-
-            nodes_view->addTopLevelItem(addItem(file));
+            node = node->getParent();
+            curr_item = curr_item->parent();
         }
+
+        QTreeWidgetItem *item = addItem(file);
+        modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(item, file));
+        ((fs::Dir*)node)->addChild(file);
+        if(curr_item == NULL)
+            nodes_view->addTopLevelItem(item);
         else
-        {
-
-        }
+            curr_item->addChild(item);
     }
-
-
 
 }
 
@@ -133,11 +162,24 @@ int CreateImage::addDir()
         if(m_root->addChild(folder) < 0)
             return -1;
 
+        nodes_view->addTopLevelItem(addFile(folder));
 
-        nodes_view->addTopLevelItem(addItem(folder));
     }
     else
     {
+        fs::Node *node = modelView[curr_item];
+
+        if(node->getType() != fs::ISO_DIR)
+        {
+            node = node->getParent();
+            curr_item = curr_item->parent();
+        }
+
+        ((fs::Dir*)node)->addChild(folder);
+        if(curr_item == NULL)
+            nodes_view->addTopLevelItem(addFile(folder));
+        else
+            curr_item->addChild(addFile((fs::Dir*)node));
 
     }
 
@@ -150,5 +192,28 @@ int CreateImage::deleteNode()
     if(item != NULL)
     {
         item->~QTreeWidgetItem();
+    }
+}
+
+void CreateImage::change()
+{
+    int x;
+    x = 2;
+}
+
+bool CreateImage::eventFilter(QObject *watched, QEvent *event)
+{
+    if(watched == nodes_view->viewport() && event->type() == QEvent::MouseButtonRelease)
+    {
+        QMouseEvent *me = static_cast<QMouseEvent *>(event);
+
+        QTreeWidgetItem *item = nodes_view->itemAt(me->pos());
+
+        if(item == NULL)
+        {
+            //nodes_view->currentItem()->setSelected(false);
+            nodes_view->setCurrentIndex(QModelIndex());
+            //nodes_view->selectionModel()->clearSelection();
+        }
     }
 }

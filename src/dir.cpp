@@ -2,15 +2,33 @@
 
 fs::Dir::Dir(const std::string &path) : Node(path)
 {
+    if(!path.compare("root"))
+        return;
+
     if(this->getType() != NodeType::ISO_DIR)
         throw "error";
 
     struct dirent *entry;
-    struct DIR *dir;
+    DIR *dir;
 
     dir = opendir(path.c_str());
+    while((entry = readdir(dir)) != NULL)
+    {
+        if(strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
+        {
+            Node *node;
+            if(entry->d_type == DT_DIR)
+                node = new Dir(path + "/" + std::string(entry->d_name));
+            else
+                node = new Node(path + "/" + std::string(entry->d_name));
+
+            this->addChild(node);
+        }
+    }
+    closedir(dir);
 
 }
+
 
 int fs::Dir::addChild(fs::Node *node)
 {

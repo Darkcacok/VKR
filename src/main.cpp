@@ -9,6 +9,8 @@
 #include <string>
 #include "QDebug"
 
+#include "fs.h"
+
 void progress(float p)
 {
     std::cout << p << std::endl;
@@ -17,10 +19,10 @@ void progress(float p)
 
 int main(int argc, char *argv[])
 {
-    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
+    /*QTextCodec *codec = QTextCodec::codecForName("UTF-8");
     QTextCodec::setCodecForTr(codec);
     QTextCodec::setCodecForCStrings(codec);
-    QTextCodec::setCodecForLocale(codec);
+    QTextCodec::setCodecForLocale(codec);*/
 
     QApplication a(argc, argv);
 
@@ -50,7 +52,6 @@ int main(int argc, char *argv[])
     iso.setExtnsnRockRidge();
     iso.CreateImage(dir, std::string("test"));
     iso.writeImage(std::string("/home/user/test.iso"), progress);*/
-
 
 
     CreateImage w;

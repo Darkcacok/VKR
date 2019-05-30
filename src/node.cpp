@@ -12,6 +12,17 @@ fs::Node::~Node()
 
 fs::Node::Node(const std::string &path)
 {
+    if(!path.compare("root"))
+    {
+        this->path = "root";
+        this->name = "root";
+        this->parent = NULL;
+        this->type = fs::ISO_DIR;
+        this->size = 0;
+
+        return;
+    }
+
     if(path.empty())
         throw "empty path";
 
@@ -23,10 +34,9 @@ fs::Node::Node(const std::string &path)
     for(edge = path.length() - 1; edge >=0 && path.at(edge) != '/'; --edge);
     this->name = path.substr(edge + 1, path.length() - 1);
 
-
     struct stat st;
 
-    if(stat(path.c_str(), &st) < 0)
+    if(lstat(path.c_str(), &st) < 0)
     {
         throw "error stat()";
     }

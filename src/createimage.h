@@ -11,7 +11,11 @@
 #include <QFileDialog>
 #include <QString>
 #include <QDebug>
+#include <QEvent>
+#include <QMouseEvent>
+#include <QItemSelectionModel>
 #include <string>
+#include <map>
 
 #include "fs.h"
 
@@ -48,16 +52,25 @@ private:
     QTreeWidgetItem *top_level_item;
     static const int column = 3;
 
+    /***/
+    std::map<QTreeWidgetItem*, fs::Node*> modelView;
+
 
     /*************Functions******************/
     int createWindow();
     QTreeWidgetItem *addItem(fs::Node *node);
+    QTreeWidgetItem *addFile(fs::Dir *dir);
 
 
 private slots:
     int addFile();
     int addDir();
     int deleteNode();
+    void change();
+
+    // QObject interface
+public:
+    bool eventFilter(QObject *watched, QEvent *event);
 };
 
 #endif // CREATEIMAGE_H

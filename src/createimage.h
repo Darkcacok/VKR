@@ -12,12 +12,15 @@
 #include <QString>
 #include <QDebug>
 #include <QEvent>
+#include <QLineEdit>
 #include <QMouseEvent>
 #include <QItemSelectionModel>
 #include <string>
 #include <map>
 
 #include "fs.h"
+#include "senddata.h"
+#include "recordform.h"
 
 class CreateImage : public QWidget
 {
@@ -43,6 +46,9 @@ private:
     QPushButton *delete_node;
     QPushButton *record;
 
+    /*******Line Edit*************/
+    QLineEdit *imgNameEdit;
+
     /*****Combobox****************/
     QComboBox *choose_disc;
 
@@ -56,17 +62,26 @@ private:
     std::map<QTreeWidgetItem*, fs::Node*> modelView;
 
 
+    /********Support Forms***********/
+    RecordForm *recordForm;
+
     /*************Functions******************/
     int createWindow();
     QTreeWidgetItem *addItem(fs::Node *node);
     QTreeWidgetItem *addFile(fs::Dir *dir);
 
 
-private slots:
+public slots:
     int addFile();
     int addDir();
     int deleteNode();
-    void change();
+    void recordIsoImage();
+    void change(QPoint &event);
+
+    void recieveData(InfoForRecord *ifr);
+
+signals:
+    void sendData(InfoForRecord *ifr);
 
     // QObject interface
 public:

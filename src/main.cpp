@@ -8,6 +8,7 @@
 #include <isofs.h>
 #include <string>
 #include "QDebug"
+#include "recordform.h"
 
 #include "fs.h"
 

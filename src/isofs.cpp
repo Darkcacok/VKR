@@ -44,7 +44,7 @@ int IsoFS::CreateImage(fs::Dir *dir, const std::string name)
     if(ret < 0)
         return ret;
 
-    for(int i = 0; i < dir->getSize(); ++i)
+   /* for(int i = 0; i < dir->getSize(); ++i)
     {
         fs::Node *node = dir->getChild(i);
 
@@ -55,17 +55,46 @@ int IsoFS::CreateImage(fs::Dir *dir, const std::string name)
             break;
         case fs::NodeType::ISO_DIR:
             IsoDir *dir;
-            iso_tree_add_new_dir(iso_image_get_root(m_image), node->getName().c_str(), &dir);
-            //iso_image_add_new_dir(m_image, iso_image_get_root(m_image), node->getName().c_str(), &dir);
-            iso_tree_add_dir_rec(m_image, dir, node->getPath().c_str());
+            //iso_tree_add_new_dir(iso_image_get_root(m_image), node->getName().c_str(), &dir);
+            iso_image_add_new_dir(m_image, iso_image_get_root(m_image), node->getName().c_str(), &dir);
+            //iso_tree_add_dir_rec(m_image, dir, node->getPath().c_str());
             break;
         }
-    }
+    }*/
+
+    addDir(dir, iso_image_get_root(m_image));
 
     return 1;
 }
 
-int IsoFS::writeImage(const std::string &file_path, void (*percent)(float))
+int IsoFS::addDir(fs::Dir *dir, IsoDir *isoDir)
+{
+    for(int i = 0; i < dir->getSize(); ++i)
+    {
+        fs::Node *node = dir->getChild(i);
+
+        if(!node->getName().compare("WorldClock"))
+        {
+            int x;
+            x = 5;
+        }
+
+        if(node->getType() == fs::ISO_DIR)
+        {
+            IsoDir *newDir;
+            iso_image_add_new_dir(m_image, isoDir, node->getName().c_str(), &newDir);
+            addDir((fs::Dir*)node, newDir);
+        }
+        else
+        {
+            iso_tree_add_node(m_image, isoDir, node->getPath().c_str(), NULL);
+        }
+    }
+
+    return 0;
+}
+
+int IsoFS::writeImage(const std::string &file_path, std::function<void(int)> percent)
 {
     struct burn_source *burn_src;
     int block_size = 2048;

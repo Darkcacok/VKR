@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <inttypes.h>
+#include <functional>
 
 
 #define LIBISOFS_WITHOUT_LIBBURN yes
@@ -32,8 +33,9 @@ public:
 
 
     /***********Write image*************************/
-    int writeImage(const std::string &file_path, void (*percent)(float));
-
+    int writeImage(const std::string &file_path, std::function<void(int)> percent);
+private:
+    int addDir(fs::Dir *dir, IsoDir *isoDir);
 
 private:
     //Status of IsoFS class

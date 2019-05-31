@@ -33,7 +33,8 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
         node.cpp \
-    createimage.cpp
+    createimage.cpp \
+    recordform.cpp
 
 HEADERS += \
     burn.h \
@@ -44,7 +45,9 @@ HEADERS += \
         mainwindow.h \
         node.h \
     fs.h \
-    createimage.h
+    createimage.h \
+    recordform.h \
+    senddata.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

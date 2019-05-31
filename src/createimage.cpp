@@ -5,7 +5,12 @@ CreateImage::CreateImage(QWidget *parent) :
 {
     createWindow();
 
+    recordForm = new RecordForm();
+    connect(this, SIGNAL(sendData(InfoForRecord*)), recordForm, SLOT(recieveData(InfoForRecord*)));
+    connect(recordForm, SIGNAL(sendData(InfoForRecord*)), this, SLOT(recieveData(InfoForRecord*)));
+
     m_root = new fs::Dir("root");
+
 }
 
 CreateImage::~CreateImage()
@@ -27,8 +32,13 @@ int CreateImage::createWindow()
     connect(add_file, SIGNAL(clicked()), this, SLOT(addFile()));
     connect(add_dir, SIGNAL(clicked()), this, SLOT(addDir()));
     connect(delete_node, SIGNAL(clicked()), this, SLOT(deleteNode()));
+    connect(record, SIGNAL(clicked()), this, SLOT(recordIsoImage()));
+
+    imgNameEdit = new QLineEdit();
+    imgNameEdit->setPlaceholderText("Название Образа");
 
     choose_disc = new QComboBox();
+    choose_disc->addItem(QString("Файл"));
 
     /************TreeWidget****************************/
     nodes_view = new QTreeWidget();
@@ -36,7 +46,8 @@ int CreateImage::createWindow()
 
     nodes_view->setColumnCount(column);
     nodes_view->setHeaderLabels(QStringList{"Название", "Тип", "Размер"});
-    nodes_view->viewport()->installEventFilter(this);
+    //nodes_view->viewport()->installEventFilter(this);
+    //connect(nodes_view, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(change(const QPoint &)));
     //connect(nodes_view, SIGNAL(itemSelectionChanged()), this, SLOT(change()));
 
 
@@ -50,6 +61,7 @@ int CreateImage::createWindow()
 
     v_layout->addLayout(h_layout_top);
     v_layout->addWidget(nodes_view);
+    v_layout->addWidget(imgNameEdit);
     v_layout->addLayout(h_layout_buttom);
 
 
@@ -179,7 +191,7 @@ int CreateImage::addDir()
         if(curr_item == NULL)
             nodes_view->addTopLevelItem(addFile(folder));
         else
-            curr_item->addChild(addFile((fs::Dir*)node));
+            curr_item->addChild(addFile(folder));
 
     }
 
@@ -195,10 +207,45 @@ int CreateImage::deleteNode()
     }
 }
 
-void CreateImage::change()
+void CreateImage::recordIsoImage()
+{
+
+    InfoForRecord ifr;
+    int  choose = choose_disc->currentIndex();
+
+    QString Qpath = QFileDialog::getSaveFileName(this, tr("Сохранить образ диска"), "", tr("All Files (*)"));
+    if(Qpath.isEmpty())
+    {
+        return;
+    }
+
+    recordForm->show();
+
+    ifr.isoPath = Qpath.toStdString();
+
+
+
+    if(choose == 0)
+        ifr.discPath = "";
+    else
+        ifr.discPath = choose_disc->currentText().toStdString();
+
+    ifr.imgName = imgNameEdit->text().toStdString();
+    ifr.dir = m_root;
+
+
+    emit sendData(&ifr);
+}
+
+void CreateImage::change(QPoint &event)
 {
     int x;
     x = 2;
+}
+
+void CreateImage::recieveData(InfoForRecord *ifr)
+{
+
 }
 
 bool CreateImage::eventFilter(QObject *watched, QEvent *event)
@@ -212,6 +259,7 @@ bool CreateImage::eventFilter(QObject *watched, QEvent *event)
         if(item == NULL)
         {
             //nodes_view->currentItem()->setSelected(false);
+            //nodes_view->clearFocus();
             nodes_view->setCurrentIndex(QModelIndex());
             //nodes_view->selectionModel()->clearSelection();
         }

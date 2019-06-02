@@ -1,20 +1,23 @@
 #ifndef RECORDFORM_H
 #define RECORDFORM_H
 
-#include <QWidget>
+#include <QDialog>
 #include <QVBoxLayout>
 #include <QProgressBar>
 #include <QLabel>
-
+#include <QtConcurrent/QtConcurrent>
 
 #include "senddata.h"
 #include "isofs.h"
 
-class RecordForm : public QWidget
+class RecordForm : public QDialog
 {
     Q_OBJECT
 public:
     explicit RecordForm(QWidget *parent = nullptr);
+    ~RecordForm();
+
+    void recordImgae(InfoForRecord ifr);
 
 private:
     /***************Layout*************/
@@ -31,11 +34,10 @@ private:
 
 
 signals:
-    void sendData(InfoForRecord *ifr);
-    void emitUpdateProgress(float persent);
+    void sendData(InfoForRecord ifr);
 
 public slots:
-    void recieveData(InfoForRecord *ifr);
+    void recieveData(InfoForRecord ifr);
 };
 
 #endif // RECORDFORM_H

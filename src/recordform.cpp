@@ -1,8 +1,13 @@
 #include "recordform.h"
 
-RecordForm::RecordForm(QWidget *parent) : QWidget(parent)
+RecordForm::RecordForm(QWidget *parent) : QDialog(parent)
 {
     createWindow();
+}
+
+RecordForm::~RecordForm()
+{
+
 }
 
 void RecordForm::createWindow()
@@ -12,7 +17,6 @@ void RecordForm::createWindow()
     status->setAlignment(Qt::AlignHCenter);
 
     progressBar = new QProgressBar();
-    //connect(progressBar, SIGNAL(updateProgress(float)), this, SLOT(sevValue(int)));
 
     v_layout->addWidget(progressBar);
     v_layout->addWidget(status);
@@ -21,13 +25,12 @@ void RecordForm::createWindow()
     this->setLayout(v_layout);
 }
 
-
-void RecordForm::recieveData(InfoForRecord *ifr)
+void RecordForm::recordImgae(InfoForRecord ifr)
 {
     int stages;
     int currentStage = 0;
 
-    if(ifr->discPath.empty())
+    if(ifr.discPath.empty())
         stages = 1;
     else
         stages = 2;
@@ -36,10 +39,16 @@ void RecordForm::recieveData(InfoForRecord *ifr)
 
     IsoFS * isoFs = new IsoFS();
     isoFs->setExtnsnRockRidge();
-    isoFs->CreateImage(ifr->dir, ifr->imgName);
-    isoFs->writeImage(ifr->isoPath, [this](float p){
+    isoFs->CreateImage(ifr.dir, ifr.imgName);
+    isoFs->writeImage(ifr.isoPath, [this](float p){
         progressBar->setValue(p);
     });
 
     status->setText("Создание Образа (" + QString::number(++currentStage) + "/" + QString::number(stages) + ")");
+}
+
+
+void RecordForm::recieveData(InfoForRecord ifr)
+{
+    QtConcurrent::run(this, &RecordForm::recordImgae, ifr);
 }

@@ -121,6 +121,7 @@ int IsoFS::writeImage(const std::string &file_path, std::function<void(int)> per
         iso_file.write(reinterpret_cast<char*>(buf), block_size);
 
         progress += block_size;
+        printf("%f\n", (progress * 100.0)/iso_size);
         percent((progress * 100.0)/iso_size);
     }
 

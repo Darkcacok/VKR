@@ -78,10 +78,10 @@ public slots:
     void recordIsoImage();
     void change(QPoint &event);
 
-    void recieveData(InfoForRecord *ifr);
+    void recieveData(InfoForRecord ifr);
 
 signals:
-    void sendData(InfoForRecord *ifr);
+    void sendData(InfoForRecord ifr);
 
     // QObject interface
 public:

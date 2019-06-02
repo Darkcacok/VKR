@@ -6,8 +6,10 @@ CreateImage::CreateImage(QWidget *parent) :
     createWindow();
 
     recordForm = new RecordForm();
-    connect(this, SIGNAL(sendData(InfoForRecord*)), recordForm, SLOT(recieveData(InfoForRecord*)));
-    connect(recordForm, SIGNAL(sendData(InfoForRecord*)), this, SLOT(recieveData(InfoForRecord*)));
+    recordForm->setModal(true);
+
+    connect(this, SIGNAL(sendData(InfoForRecord)), recordForm, SLOT(recieveData(InfoForRecord)));
+    connect(recordForm, SIGNAL(sendData(InfoForRecord)), this, SLOT(recieveData(InfoForRecord)));
 
     m_root = new fs::Dir("root");
 
@@ -219,11 +221,7 @@ void CreateImage::recordIsoImage()
         return;
     }
 
-    recordForm->show();
-
     ifr.isoPath = Qpath.toStdString();
-
-
 
     if(choose == 0)
         ifr.discPath = "";
@@ -233,8 +231,9 @@ void CreateImage::recordIsoImage()
     ifr.imgName = imgNameEdit->text().toStdString();
     ifr.dir = m_root;
 
+    recordForm->show();
 
-    emit sendData(&ifr);
+    emit sendData(ifr);
 }
 
 void CreateImage::change(QPoint &event)
@@ -243,7 +242,7 @@ void CreateImage::change(QPoint &event)
     x = 2;
 }
 
-void CreateImage::recieveData(InfoForRecord *ifr)
+void CreateImage::recieveData(InfoForRecord ifr)
 {
 
 }

@@ -104,6 +104,7 @@ int CreateImage::createWindow()
     delete_node->setToolTip("Удалить Файл или Папку");
     record->setToolTip("Записать образ на диск");
 
+    /********************Set Icons******************************/
     add_file->setIcon(QIcon(":/icons/document-new.svg"));
     add_dir->setIcon(QIcon(":/icons/folder-add.svg"));
     delete_node->setIcon(QIcon(":/icons/edit-delete.svg"));
@@ -331,10 +332,51 @@ int CreateImage::deleteNode()
 }
 
 void CreateImage::recordIsoImage()
-{
-
+{      
     InfoForRecord ifr;
     int  choose = choose_disc->currentIndex();
+
+    if(choose == 0)
+        ifr.discPath = "";
+    else
+    {
+        ifr.discPath = burn->getDrivePath(choose);
+        struct disc_info *di = burn->getDiscInfo(choose - 1);
+
+        if(di->status == burn::BURN_DISC_FULL)
+        {
+            QMessageBox msgBox;
+            msgBox.setText("Диск полный");
+            msgBox.setInformativeText("Хотите отчистить диск?");
+            msgBox.setStandardButtons(QMessageBox::No | QMessageBox::Yes);
+            int ret = msgBox.exec();
+
+
+            if(ret == QMessageBox::Yes)
+            {
+                if(burn->driveScanAndGrab(di->path_to_disc) < 0)
+                    QMessageBox::information(this, "Ошибка", "Не удалсоь захваить диск");
+
+                QProgressDialog progress(this);
+                connect(this, SIGNAL(setValue(int)), &progress, SLOT(setValue(int)));
+                progress.setMinimum(0);
+                progress.setMaximum(100);
+                progress.setLabelText("Отчистка Диска");
+                progress.setModal(true);
+                progress.show();
+
+                burn->blankDisc(1, [this](float p){
+                    emit setValue(p);
+                });
+
+                return;
+            }
+            else {
+                return;
+            }
+
+        }
+    }
 
     QString Qpath = QFileDialog::getSaveFileName(this, tr("Сохранить образ диска"), "", tr("All Files (*)"));
     if(Qpath.isEmpty())
@@ -343,11 +385,6 @@ void CreateImage::recordIsoImage()
     }
 
     ifr.isoPath = Qpath.toStdString();
-
-    if(choose == 0)
-        ifr.discPath = "";
-    else
-        ifr.discPath = burn->getDrivePath(choose);
 
     ifr.imgName = imgNameEdit->text().toStdString();
     ifr.dir = m_root;

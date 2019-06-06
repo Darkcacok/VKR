@@ -34,6 +34,7 @@ public:
 
 
     int writeIso(std::string &iso_path, std::function<void(float)> progress);
+    int blankDisc(int blank_fast, std::function<void(float)> progress);
 
     /******** DEBUG INFO *********/
 

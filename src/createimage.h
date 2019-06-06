@@ -17,6 +17,7 @@
 #include <QItemSelectionModel>
 #include <QtConcurrent/QtConcurrent>
 #include <QMessageBox>
+#include <QProgressDialog>
 #include <string>
 #include <map>
 
@@ -92,6 +93,7 @@ public slots:
 
 signals:
     void sendData(InfoForRecord ifr);
+    void setValue(int);
 
     // QObject interface
 public:

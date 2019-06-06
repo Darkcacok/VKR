@@ -15,6 +15,8 @@ Burn::Burn()
 
 Burn::~Burn()
 {
+    if(m_drive != NULL)
+        burn::burn_drive_release(m_drive, 0);
     burn::burn_finish();
 }
 
@@ -316,3 +318,54 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
 
     return 1;
 }
+
+int Burn::blankDisc(int blank_fast, std::function<void (float)> progress)
+{
+    int current_profile;
+    char name_po[80];
+    enum burn::burn_disc_status disc_state;
+    struct burn::burn_progress p;
+    double percent = 1.0;
+
+    disc_state = burn::burn_disc_get_status(m_drive);
+
+    burn::burn_disc_get_profile(m_drive, &current_profile, name_po);
+
+    if(current_profile == 0x13)
+    {
+        ; /* formatted DVD-RW will get blanked to sequential state */
+    }
+
+    switch(disc_state)
+    {
+    case burn::BURN_DISC_BLANK:
+        std::cout << "Media already blank" << std::endl;
+        return 2;
+    case burn::BURN_DISC_EMPTY:
+        std::cout << "No media detected in drive\n";
+        return -1;
+    default:
+        std::cout << "Unsuitable drive and media state" << std::endl;
+        return -1;
+    }
+
+    if(!burn::burn_disc_erasable(m_drive)) {
+        std::cout << "Media is not of erasable type" << std::endl;
+        return -1;
+    }
+
+    burn::burn_disc_erase(m_drive, blank_fast);
+
+    while(burn::burn_drive_get_status(m_drive, &p) != burn::BURN_DRIVE_IDLE)
+    {
+        if(p.sectors>0 && p.sector>=0) /* display 1 to 99 percent */
+            percent = 1.0 + ((double) p.sector+1.0)
+                    / ((double) p.sectors) * 98.0;
+        progress(percent);
+        std::cout << "Blanking: " << percent  << "% done"<< std::endl;
+        sleep(1);
+    }
+
+    return 1;
+}
+

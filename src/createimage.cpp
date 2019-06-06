@@ -12,7 +12,73 @@ CreateImage::CreateImage(QWidget *parent) :
     connect(recordForm, SIGNAL(sendData(InfoForRecord)), this, SLOT(recieveData(InfoForRecord)));
 
     m_root = new fs::Dir("root");
+    burn = new Burn();
+    checLabel = false;
+    checkTree = false;
 
+    QtConcurrent::run(this, &CreateImage::driveScan);
+
+}
+
+void CreateImage::driveScan()
+{
+    burn->driveScan();
+
+    for(int i = 0; i < burn->getDrivesCount(); ++i)
+    {
+        struct disc_info *di;
+        char scales[] = "bkmgtp";
+        char scale_c = scales[0];
+        float size;
+        std::string str;
+
+        di = burn->getDiscInfo(i);
+
+        size = di->available_size;
+
+        for(int i = 1; scales[i]!= '\0'; ++i)
+        {
+            if(size <= 1024)
+                break;
+            size /= 1024;
+            scale_c = scales[i];
+        }
+
+        str = di->profile_name;
+        char buf[4];
+        sprintf(buf, "%.2f", size);
+        str += ": " + std::string(buf);
+
+        switch (scale_c)
+        {
+        case 'b':
+            str += "byte";
+            break;
+        case 'k':
+            str += "KiB";
+            break;
+        case 'm':
+            str += "MiB";
+            break;
+        case 'g':
+            str += "GiB";
+            break;
+        case 't':
+            str += "TiB";
+            break;
+        case 'p':
+            str += "PiB";
+            break;
+        }
+    }
+}
+
+void CreateImage::checkRecord()
+{
+    if(checLabel && checkTree)
+        record->setEnabled(true);
+    else
+        record->setEnabled(false);
 }
 
 CreateImage::~CreateImage()
@@ -30,6 +96,7 @@ int CreateImage::createWindow()
     add_dir = new QPushButton("Добавить папку");
     delete_node = new QPushButton("Удалить");
     record = new QPushButton("Записать");
+    record->setEnabled(false);
 
     connect(add_file, SIGNAL(clicked()), this, SLOT(addFile()));
     connect(add_dir, SIGNAL(clicked()), this, SLOT(addDir()));
@@ -38,6 +105,7 @@ int CreateImage::createWindow()
 
     imgNameEdit = new QLineEdit();
     imgNameEdit->setPlaceholderText("Название Образа");
+    connect(imgNameEdit, SIGNAL(textEdited(const QString&)), this, SLOT(labelEdited(const QString&)));
 
     choose_disc = new QComboBox();
     choose_disc->addItem(QString("Файл"));
@@ -83,12 +151,12 @@ QTreeWidgetItem *CreateImage::addItem(fs::Node *node)
         break;
     case fs::NodeType::ISO_DIR:
         item->setText(1, "Папка");
-         item->setText(2, QString::number(node->getSize()) + QString(" элементов"));
-         break;
+        item->setText(2, QString::number(node->getSize()) + QString(" элементов"));
+        break;
     case fs::NodeType::ISO_SYMLINK:
         item->setText(1, "Ссылка");
-         item->setText(2, QString::number(node->getSize()) + QString(" байт"));
-         break;
+        item->setText(2, QString::number(node->getSize()) + QString(" байт"));
+        break;
     }
 
 
@@ -152,11 +220,20 @@ int CreateImage::addFile()
 
         QTreeWidgetItem *item = addItem(file);
         modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(item, file));
-        ((fs::Dir*)node)->addChild(file);
+
+        if(((fs::Dir*)node)->addChild(file) < 0)
+            return -1;
+
         if(curr_item == NULL)
             nodes_view->addTopLevelItem(item);
         else
             curr_item->addChild(item);
+    }
+
+    if(!checkTree)
+    {
+        checkTree = true;
+        checkRecord();
     }
 
 }
@@ -164,8 +241,8 @@ int CreateImage::addFile()
 int CreateImage::addDir()
 {
     QString dir = QFileDialog::getExistingDirectory(this, tr("Open Directory"),"/home/user",
-                                                     QFileDialog::ShowDirsOnly
-                                                     | QFileDialog::DontResolveSymlinks);
+                                                    QFileDialog::ShowDirsOnly
+                                                    | QFileDialog::DontResolveSymlinks);
     if(dir.isEmpty())
         return -1;
 
@@ -189,12 +266,19 @@ int CreateImage::addDir()
             curr_item = curr_item->parent();
         }
 
-        ((fs::Dir*)node)->addChild(folder);
+        if(((fs::Dir*)node)->addChild(folder) < 0)
+            return -1;
+
         if(curr_item == NULL)
             nodes_view->addTopLevelItem(addFile(folder));
         else
             curr_item->addChild(addFile(folder));
+    }
 
+    if(!checkTree)
+    {
+        checkTree = true;
+        checkRecord();
     }
 
 }
@@ -206,6 +290,13 @@ int CreateImage::deleteNode()
     if(item != NULL)
     {
         item->~QTreeWidgetItem();
+    }
+
+    if(m_root->getSize() == 0)
+    {
+        checLabel == false;
+
+        checkRecord();
     }
 }
 
@@ -226,7 +317,7 @@ void CreateImage::recordIsoImage()
     if(choose == 0)
         ifr.discPath = "";
     else
-        ifr.discPath = choose_disc->currentText().toStdString();
+        ifr.discPath = burn->getDrivePath(choose);
 
     ifr.imgName = imgNameEdit->text().toStdString();
     ifr.dir = m_root;
@@ -240,6 +331,20 @@ void CreateImage::change(QPoint &event)
 {
     int x;
     x = 2;
+}
+
+void CreateImage::labelEdited(const QString &text)
+{
+    if(text.isEmpty())
+    {
+        checLabel = false;
+    }
+    else
+    {
+        checLabel = true;
+    }
+
+    checkRecord();
 }
 
 void CreateImage::recieveData(InfoForRecord ifr)

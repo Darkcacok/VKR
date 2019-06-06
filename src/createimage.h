@@ -15,10 +15,12 @@
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QItemSelectionModel>
+#include <QtConcurrent/QtConcurrent>
 #include <string>
 #include <map>
 
 #include "fs.h"
+#include "burn.h"
 #include "senddata.h"
 #include "recordform.h"
 
@@ -27,12 +29,14 @@ class CreateImage : public QWidget
     Q_OBJECT
 
 public:
-    explicit CreateImage(QWidget *parent = 0);
+    explicit CreateImage(QWidget *parent = nullptr);
     ~CreateImage();
 
 private:
 
     fs::Dir *m_root;
+    Burn *burn;
+    bool checLabel, checkTree;
 
 
     /******Layout************/
@@ -70,6 +74,10 @@ private:
     QTreeWidgetItem *addItem(fs::Node *node);
     QTreeWidgetItem *addFile(fs::Dir *dir);
 
+    void driveScan();
+
+    void checkRecord();
+
 
 public slots:
     int addFile();
@@ -77,6 +85,7 @@ public slots:
     int deleteNode();
     void recordIsoImage();
     void change(QPoint &event);
+    void labelEdited(const QString &text);
 
     void recieveData(InfoForRecord ifr);
 

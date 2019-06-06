@@ -38,6 +38,7 @@ SOURCES += \
 
 HEADERS += \
     burn.h \
+    burnconst.h \
         constants.h \
         dir.h \
         file.h \

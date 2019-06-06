@@ -28,12 +28,18 @@ void RecordForm::createWindow()
 void RecordForm::recordImgae(InfoForRecord ifr)
 {
     int stages;
-    int currentStage = 0;
+    int currentStage = 1;
+    Burn *burn = new Burn();
 
     if(ifr.discPath.empty())
         stages = 1;
     else
         stages = 2;
+
+    if(stages == 2)
+    {
+        burn->driveScanAndGrab(ifr.discPath);
+    }
 
     status->setText("Создание Образа (" + QString::number(currentStage) + "/" + QString::number(stages) + ")");
 
@@ -44,7 +50,13 @@ void RecordForm::recordImgae(InfoForRecord ifr)
         progressBar->setValue(p);
     });
 
-    status->setText("Создание Образа (" + QString::number(++currentStage) + "/" + QString::number(stages) + ")");
+    if(stages == 2)
+    {
+        status->setText("Запись образа на диск (" + QString::number(++currentStage) + "/" + QString::number(stages) + ")");
+        burn->writeIso(ifr.isoPath, [this](float p){
+            progressBar->setValue(p);
+        });
+    }
 }
 
 

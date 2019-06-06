@@ -73,12 +73,6 @@ int IsoFS::addDir(fs::Dir *dir, IsoDir *isoDir)
     {
         fs::Node *node = dir->getChild(i);
 
-        if(!node->getName().compare("WorldClock"))
-        {
-            int x;
-            x = 5;
-        }
-
         if(node->getType() == fs::ISO_DIR)
         {
             IsoDir *newDir;

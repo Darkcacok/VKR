@@ -31,16 +31,120 @@ int Burn::driveScan()
     for(int i = 0; i < drive_count; ++i)
     {
         char adr[BURN_DRIVE_ADR_LEN];
+        struct burn::burn_multi_caps *caps = NULL;
+        struct burn::burn_write_opts *o = NULL;
+        struct disc_info di;
 
         if(burn::burn_drive_d_get_adr(drive_list[i].drive, adr) <= 0)
         {
             std::cout << "ERROR: " << "burn_drive_d_get_adr" << std::endl;
         }
 
-        m_drives.push_back(adr);
+        di.path_to_disc = adr;
+
+        if(!burn::burn_drive_grab(drive_list[i].drive, 1))
+        {
+            std::cout << "ERROR: " << "burn_drive_grab" << std::endl;
+        }
+        else
+        {
+            di.status = burn::burn_disc_get_status(drive_list[i].drive);
+
+            if(!burn::burn_disc_get_profile(drive_list[i].drive, &di.profile_no, di.profile_name))
+                std::cout << "ERROR: " << "burn_drive_get_profile" << std::endl;
+
+            if(burn::burn_disc_get_multi_caps(drive_list[i].drive, burn::BURN_WRITE_NONE, &caps, 0) > 0)
+            {
+                o = burn::burn_write_opts_new(drive_list[i].drive);
+                if(o != NULL)
+                {
+                    burn::burn_write_opts_set_perform_opc(o, 0);
+
+                    if(caps->advised_write_mode == burn::BURN_WRITE_TAO)
+                        burn::burn_write_opts_set_write_type(o, burn::BURN_WRITE_TAO, burn::BURN_BLOCK_MODE1);
+                    else if(caps->advised_write_mode == burn::BURN_WRITE_SAO)
+                        burn::burn_write_opts_set_write_type(o, burn::BURN_WRITE_SAO, burn::BURN_BLOCK_SAO);
+                    else{
+                        burn::burn_write_opts_free(o);
+                        o = NULL;
+                    }
+                }
+
+                di.available_size = burn::burn_disc_available_space(drive_list[i].drive, 0);
+
+                burn::burn_disc_free_multi_caps(&caps);
+                if(o != NULL)
+                    burn::burn_write_opts_free(o);
+            }
+        }
+
+        burn::burn_drive_release(drive_list[i].drive, 0);
+
+        m_drives.push_back(di);
     }
 
     burn::burn_drive_info_free(drive_list);
+
+    return 1;
+}
+
+int Burn::driveScanAndGrab(std::string &device_addr)
+{
+    if(m_drive != NULL)
+        burn::burn_drive_release(m_drive, 0);
+
+    struct burn::burn_drive_info *drive_list;
+    int ret;
+
+    ret = burn::burn_drive_scan_and_grab(&drive_list, strdup(device_addr.c_str()), 1);
+
+    if(ret <= 0)
+        return -1;
+
+
+    char adr[BURN_DRIVE_ADR_LEN];
+    struct burn::burn_multi_caps *caps = NULL;
+    struct burn::burn_write_opts *o = NULL;
+    struct disc_info di;
+
+    if(burn::burn_drive_d_get_adr(drive_list[0].drive, adr) <= 0)
+    {
+        std::cout << "ERROR: " << "burn_drive_d_get_adr" << std::endl;
+    }
+
+
+    di.status = burn::burn_disc_get_status(drive_list[0].drive);
+
+    if(!burn::burn_disc_get_profile(drive_list[0].drive, &di.profile_no, di.profile_name))
+        std::cout << "ERROR: " << "burn_drive_get_profile" << std::endl;
+
+    if(burn::burn_disc_get_multi_caps(drive_list[0].drive, burn::BURN_WRITE_NONE, &caps, 0) > 0)
+    {
+        o = burn::burn_write_opts_new(drive_list[0].drive);
+        if(o != NULL)
+        {
+            burn::burn_write_opts_set_perform_opc(o, 0);
+
+            if(caps->advised_write_mode == burn::BURN_WRITE_TAO)
+                burn::burn_write_opts_set_write_type(o, burn::BURN_WRITE_TAO, burn::BURN_BLOCK_MODE1);
+            else if(caps->advised_write_mode == burn::BURN_WRITE_SAO)
+                burn::burn_write_opts_set_write_type(o, burn::BURN_WRITE_SAO, burn::BURN_BLOCK_SAO);
+            else{
+                burn::burn_write_opts_free(o);
+                o = NULL;
+            }
+        }
+
+        di.available_size = burn::burn_disc_available_space(drive_list[0].drive, 0);
+
+        burn::burn_disc_free_multi_caps(&caps);
+        if(o != NULL)
+            burn::burn_write_opts_free(o);
+    }
+
+    m_drive = drive_list[0].drive;
+
+    burn::burn_drive_info_free(drive_list);//?
 
     return 1;
 }
@@ -51,21 +155,27 @@ int Burn::getDrivesCount()
     return m_drives.size();
 }
 
+disc_info *Burn::getDiscInfo(int n)
+{
+    if(n >= getDrivesCount())
+        return NULL;
+
+    return &m_drives[n];
+}
+
 std::string Burn::getDrivePath(int n)
 {
     if(n >= getDrivesCount())
         return NULL;
 
-    return m_drives[n];
+    return m_drives[n].path_to_disc;
 }
 
-int Burn::writeIso(unsigned int d, std::string &iso_path, void (*progress)(float))
+int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
 {
-    struct burn::burn_drive_info *drive_info = NULL;
     int ret;
 
     /*Try grab known driver*/
-    ret = burn::burn_drive_scan_and_grab(&drive_info, strdup(m_drives[d].c_str()), 1);
     if(ret < 0)
         return ret;
 
@@ -144,67 +254,65 @@ int Burn::writeIso(unsigned int d, std::string &iso_path, void (*progress)(float
         return -1;
     }
 
-     burn_source_free(data_src);
+    burn_source_free(data_src);
 
-     /*Check disc state*/
-     enum burn::burn_disc_status disc_state = burn::burn_disc_get_status(drive_info->drive);
-     if(disc_state != burn::BURN_DISC_BLANK && disc_state != burn::BURN_DISC_APPENDABLE)
-     {
-         return -1;
-     }
+    /*Check disc state*/
+    enum burn::burn_disc_status disc_state = burn::burn_disc_get_status(m_drive);
+    if(disc_state != burn::BURN_DISC_BLANK && disc_state != burn::BURN_DISC_APPENDABLE)
+    {
+        return -1;
+    }
 
-     /*Create burn option*/
-     if((burn_options = burn::burn_write_opts_new(drive_info->drive)) == NULL)
-     {
-         return -1;
-     }
-     burn::burn_write_opts_set_perform_opc(burn_options, opc);
-     burn::burn_write_opts_set_multi(burn_options, multi);
-     burn::burn_write_opts_set_simulate(burn_options, simulate_burn);
-     burn::burn_write_opts_set_underrun_proof(burn_options, underrun_proof);
-     char reasons[BURN_REASONS_LEN];
-     if(burn::burn_write_opts_auto_write_type(burn_options, target_disc, reasons, 0) == burn::BURN_WRITE_NONE)
-     {
-         std::cout << "FATAL: Failed to find a suitable write mode with this media.\n"
-                      << "Reasons given:" << std::endl
-                      << reasons << std::endl;
-                 return -1;
-     }
+    /*Create burn option*/
+    if((burn_options = burn::burn_write_opts_new(m_drive)) == NULL)
+    {
+        return -1;
+    }
+    burn::burn_write_opts_set_perform_opc(burn_options, opc);
+    burn::burn_write_opts_set_multi(burn_options, multi);
+    burn::burn_write_opts_set_simulate(burn_options, simulate_burn);
+    burn::burn_write_opts_set_underrun_proof(burn_options, underrun_proof);
+    char reasons[BURN_REASONS_LEN];
+    if(burn::burn_write_opts_auto_write_type(burn_options, target_disc, reasons, 0) == burn::BURN_WRITE_NONE)
+    {
+        std::cout << "FATAL: Failed to find a suitable write mode with this media.\n"
+                  << "Reasons given:" << std::endl
+                  << reasons << std::endl;
+        return -1;
+    }
 
-     burn::burn_drive_set_speed(drive_info->drive, read_speed, write_speed);
+    burn::burn_drive_set_speed(m_drive, read_speed, write_speed);
 
-     /*Finally write iso to disc*/
-     burn::burn_disc_write(burn_options, target_disc);
+    /*Finally write iso to disc*/
+    burn::burn_disc_write(burn_options, target_disc);
 
-     while(burn::burn_drive_get_status(drive_info->drive, NULL) == burn::BURN_DRIVE_SPAWNING)
-         usleep(100002);
+    while(burn::burn_drive_get_status(m_drive, NULL) == burn::BURN_DRIVE_SPAWNING)
+        usleep(100002);
 
-     while(burn::burn_drive_get_status(drive_info->drive, &b_progress) != burn::BURN_DRIVE_IDLE)
-     {
-         if(b_progress.sectors > 0 && b_progress.sector >= 0)
-             progress(1.0 + 100.0 * b_progress.sector / b_progress.sectors);
+    while(burn::burn_drive_get_status(m_drive, &b_progress) != burn::BURN_DRIVE_IDLE)
+    {
+        if(b_progress.sectors > 0 && b_progress.sector >= 0)
+            progress(1.0 + 100.0 * b_progress.sector / b_progress.sectors);
 
-         sleep(1);
-     }
+        sleep(1);
+    }
 
 
-     /*Free all struct*/
-     if(burn_options != NULL)
-         burn::burn_write_opts_free(burn_options);
-     if(fifo_src != NULL)
-         burn::burn_source_free(fifo_src);
-     if(track != NULL)
-         burn::burn_track_free(track);
-     if(target_disc != NULL)
-         burn::burn_disc_free(target_disc);
-     if(data_src != NULL)
-         burn::burn_source_free(data_src);
-     if(session != NULL)
-         burn::burn_session_free(session);
+    /*Free all struct*/
+    if(burn_options != NULL)
+        burn::burn_write_opts_free(burn_options);
+    if(fifo_src != NULL)
+        burn::burn_source_free(fifo_src);
+    if(track != NULL)
+        burn::burn_track_free(track);
+    if(target_disc != NULL)
+        burn::burn_disc_free(target_disc);
+    if(data_src != NULL)
+        burn::burn_source_free(data_src);
+    if(session != NULL)
+        burn::burn_session_free(session);
 
-     burn::burn_drive_info_forget(drive_info, 0);
+    burn::burn_drive_release(m_drive, 1);
 
-     burn::burn_drive_release(drive_info->drive, 1);
-
-     return 1;
+    return 1;
 }

@@ -1,2 +1,3 @@
 #Qt creator build folder
 build*
+src.pro.*

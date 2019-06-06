@@ -9,6 +9,7 @@
 
 #include "senddata.h"
 #include "isofs.h"
+#include "burn.h"
 
 class RecordForm : public QDialog
 {

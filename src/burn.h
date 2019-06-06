@@ -9,8 +9,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <iostream>
+#include <functional>
 
 #include "../libburn/libburn.h"
+#include "burnconst.h"
 
 class Burn
 {
@@ -19,8 +21,10 @@ public:
     ~Burn();
 
     int driveScan();
+    int driveScanAndGrab(std::string &device_addr);
 
     int getDrivesCount();
+    struct disc_info *getDiscInfo(int n);
 
     /**
         @param n Index of m_drives starts from zero
@@ -29,12 +33,13 @@ public:
     std::string getDrivePath(int n);
 
 
-    int writeIso(unsigned int d, std::string &iso_path, void (*progress)(float));
+    int writeIso(std::string &iso_path, std::function<void(float)> progress);
 
     /******** DEBUG INFO *********/
 
 private:
-    std::vector<std::string> m_drives;
+    std::vector<struct disc_info> m_drives;
+    struct burn::burn_drive *m_drive;
 
     /*********Burn opts****************/
     int opc; //If non-zero, optical power calibration will be performed at start of burn

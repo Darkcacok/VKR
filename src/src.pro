@@ -66,3 +66,6 @@ unix:!macx: LIBS += -L$$PWD/../lib/libburn/ -lburn
 
 INCLUDEPATH += $$PWD/../lib/libburn
 DEPENDPATH += $$PWD/../lib/libburn
+
+RESOURCES += \
+    icons.qrc

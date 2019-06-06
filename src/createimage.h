@@ -16,6 +16,7 @@
 #include <QMouseEvent>
 #include <QItemSelectionModel>
 #include <QtConcurrent/QtConcurrent>
+#include <QMessageBox>
 #include <string>
 #include <map>
 

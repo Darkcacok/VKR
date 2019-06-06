@@ -92,11 +92,26 @@ int CreateImage::createWindow()
     h_layout_top = new QHBoxLayout();
     h_layout_buttom = new QHBoxLayout();
 
-    add_file = new QPushButton("Добавить файл");
-    add_dir = new QPushButton("Добавить папку");
+    add_file = new QPushButton("Добавить Файл");
+    add_dir = new QPushButton("Добавить Папку");
     delete_node = new QPushButton("Удалить");
     record = new QPushButton("Записать");
     record->setEnabled(false);
+
+
+    add_file->setToolTip("Добавить Файл");
+    add_dir->setToolTip("Добавить Файл");
+    delete_node->setToolTip("Удалить Файл или Папку");
+    record->setToolTip("Записать образ на диск");
+
+    add_file->setIcon(QIcon(":/icons/document-new.svg"));
+    add_dir->setIcon(QIcon(":/icons/folder-add.svg"));
+    delete_node->setIcon(QIcon(":/icons/edit-delete.svg"));
+    record->setIcon(QIcon(":/icons/application-x-cda.svg"));
+
+    add_file->setIconSize(QSize(20,20));
+    add_dir->setIconSize(QSize(20,20));
+    delete_node->setIconSize(QSize(20,20));
 
     connect(add_file, SIGNAL(clicked()), this, SLOT(addFile()));
     connect(add_dir, SIGNAL(clicked()), this, SLOT(addDir()));
@@ -146,14 +161,17 @@ QTreeWidgetItem *CreateImage::addItem(fs::Node *node)
     item->setText(0, QString(node->getName().c_str()));
     switch (node->getType()) {
     case fs::NodeType::ISO_FILE:
+        item->setIcon(0, QIcon(":/icons/text-x-generic.svg"));
         item->setText(1, "Файл");
         item->setText(2, QString::number(node->getSize()) + QString(" байт"));
         break;
     case fs::NodeType::ISO_DIR:
+        item->setIcon(0, QIcon(":/icons/folder.svg"));
         item->setText(1, "Папка");
         item->setText(2, QString::number(node->getSize()) + QString(" элементов"));
         break;
     case fs::NodeType::ISO_SYMLINK:
+        item->setIcon(0, QIcon(":/icons/text-x-generic.svg"));
         item->setText(1, "Ссылка");
         item->setText(2, QString::number(node->getSize()) + QString(" байт"));
         break;
@@ -201,7 +219,10 @@ int CreateImage::addFile()
         fs::File *file = new fs::File(fileName.toStdString());
 
         if(m_root->addChild(file) < 0)
+        {
+            QMessageBox::information(this, "Внимание", "В этой папке уже есть файл с таким именем: " + QString(file->getName().c_str()));
             return -1;
+        }
 
         QTreeWidgetItem *item = addItem(file);
         modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(item, file));
@@ -222,7 +243,10 @@ int CreateImage::addFile()
         modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(item, file));
 
         if(((fs::Dir*)node)->addChild(file) < 0)
+        {
+            QMessageBox::information(this, "Внимание", "В этой папке уже есть файл с таким именем: " + QString(file->getName().c_str()));
             return -1;
+        }
 
         if(curr_item == NULL)
             nodes_view->addTopLevelItem(item);
@@ -251,7 +275,10 @@ int CreateImage::addDir()
     if(curr_item == NULL)
     {
         if(m_root->addChild(folder) < 0)
+        {
+            QMessageBox::information(this, "Внимание", "В этой папке уже есть папка с таким именем: " + QString(folder->getName().c_str()));
             return -1;
+        }
 
         nodes_view->addTopLevelItem(addFile(folder));
 
@@ -267,7 +294,10 @@ int CreateImage::addDir()
         }
 
         if(((fs::Dir*)node)->addChild(folder) < 0)
+        {
+            QMessageBox::information(this, "Внимание", "В этой папке уже есть папка с таким именем: " + QString(folder->getName().c_str()));
             return -1;
+        }
 
         if(curr_item == NULL)
             nodes_view->addTopLevelItem(addFile(folder));

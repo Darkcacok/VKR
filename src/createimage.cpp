@@ -22,6 +22,13 @@ CreateImage::CreateImage(QWidget *parent) :
 
 void CreateImage::driveScan()
 {
+    for(int i = 1; i < choose_disc->count(); ++i)
+    {
+        choose_disc->removeItem(i);
+    }
+
+    choose_disc->setCurrentIndex(0);
+
     burn->driveScan();
 
     for(int i = 0; i < burn->getDrivesCount(); ++i)
@@ -70,6 +77,8 @@ void CreateImage::driveScan()
             str += "PiB";
             break;
         }
+
+        choose_disc->addItem(QString(str.c_str()));
     }
 }
 
@@ -340,7 +349,7 @@ void CreateImage::recordIsoImage()
         ifr.discPath = "";
     else
     {
-        ifr.discPath = burn->getDrivePath(choose);
+        ifr.discPath = burn->getDrivePath(choose-1);
         struct disc_info *di = burn->getDiscInfo(choose - 1);
 
         if(di->status == burn::BURN_DISC_FULL)
@@ -365,9 +374,14 @@ void CreateImage::recordIsoImage()
                 progress.setModal(true);
                 progress.show();
 
-                burn->blankDisc(1, [this](float p){
+                if(burn->blankDisc(1, [=](float p){
                     emit setValue(p);
-                });
+                }) > 0)
+                {
+                    burn->~Burn();
+                    burn = new Burn();
+                    QtConcurrent::run(this, &CreateImage::driveScan);
+                }
 
                 return;
             }

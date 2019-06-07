@@ -3,6 +3,8 @@
 RecordForm::RecordForm(QWidget *parent) : QDialog(parent)
 {
     createWindow();
+    connect(this, SIGNAL(setValue(int)), progressBar, SLOT(setValue(int)));
+    connect(this, SIGNAL(setText(QString)), status, SLOT(setText(QString)));
 }
 
 RecordForm::~RecordForm()
@@ -13,6 +15,7 @@ RecordForm::~RecordForm()
 void RecordForm::createWindow()
 {
     v_layout = new QVBoxLayout();
+
     status = new QLabel("Статус");
     status->setAlignment(Qt::AlignHCenter);
 
@@ -27,6 +30,7 @@ void RecordForm::createWindow()
 
 void RecordForm::recordImgae(InfoForRecord ifr)
 {
+    int ret;
     int stages;
     int currentStage = 1;
     Burn *burn = new Burn();
@@ -38,24 +42,33 @@ void RecordForm::recordImgae(InfoForRecord ifr)
 
     if(stages == 2)
     {
-        burn->driveScanAndGrab(ifr.discPath);
+        if(burn->driveScanAndGrab(ifr.discPath) < 0)
+            return;
     }
 
-    status->setText("Создание Образа (" + QString::number(currentStage) + "/" + QString::number(stages) + ")");
+    emit setText("Создание Образа (" + QString::number(currentStage) + "/" + QString::number(stages) + ")");
 
     IsoFS * isoFs = new IsoFS();
     isoFs->setExtnsnRockRidge();
     isoFs->CreateImage(ifr.dir, ifr.imgName);
-    isoFs->writeImage(ifr.isoPath, [this](float p){
-        progressBar->setValue(p);
+    isoFs->writeImage(ifr.isoPath, [=](float p){
+        emit setValue(p);
     });
 
     if(stages == 2)
     {
-        status->setText("Запись образа на диск (" + QString::number(++currentStage) + "/" + QString::number(stages) + ")");
-        burn->writeIso(ifr.isoPath, [this](float p){
-            progressBar->setValue(p);
+        emit setText("Запись образа на диск (" + QString::number(++currentStage) + "/" + QString::number(stages) + ")");
+        emit setValue(0);
+        ret = burn->writeIso(ifr.isoPath, [=](float p){
+            emit setValue(p);
         });
+    }
+
+
+    if(ret > 0)
+    {
+        burn->~Burn();
+        close();
     }
 }
 

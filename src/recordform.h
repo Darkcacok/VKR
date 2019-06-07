@@ -36,6 +36,8 @@ private:
 
 signals:
     void sendData(InfoForRecord ifr);
+    void setValue(int);
+    void setText(QString);
 
 public slots:
     void recieveData(InfoForRecord ifr);

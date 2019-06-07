@@ -5,6 +5,7 @@ Burn::Burn()
     if(!burn::burn_initialize())
         throw "error init";
 
+    m_drive = NULL;
     opc = 0;
     multi = 0;
     simulate_burn = 0;
@@ -146,7 +147,7 @@ int Burn::driveScanAndGrab(std::string &device_addr)
 
     m_drive = drive_list[0].drive;
 
-    burn::burn_drive_info_free(drive_list);//?
+    //burn::burn_drive_info_free(drive_list);//?
 
     return 1;
 }
@@ -175,11 +176,12 @@ std::string Burn::getDrivePath(int n)
 
 int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
 {
-    int ret;
 
-    /*Try grab known driver*/
-    if(ret < 0)
-        return ret;
+    /* Print messages of severity SORRY or more directly to stderr */
+    burn::burn_msgs_set_severities("NEVER", "SORRY", "libburner : ");
+    burn::burn_set_signal_handling((void*)"libburner : ", NULL, 0x30);
+
+    int ret;
 
     int fd;
     int fd_size;
@@ -225,6 +227,15 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
     int fifo_chunks = 2048;
     int padding = 300 * 1024; //a padding of 300 kiB helps to avoid the read-ahead bug
 
+
+    target_disc = burn::burn_disc_create();
+    session = burn::burn_session_create();
+    burn::burn_disc_add_session(target_disc, session, BURN_POS_END);
+
+    track = burn::burn_track_create();
+    burn::burn_track_define_data(track, 0, padding, 1, BURN_MODE1);
+
+
     /*Convert this filedescriptor into a burn_source object*/
     data_src = burn::burn_fd_source_new(fd, -1, fd_size);
     if (data_src == NULL)
@@ -242,12 +253,15 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
         return -1;
     }
 
+
     /* Use the fifo object as data source for the track */
     if (burn::burn_track_set_source(track, fifo_src) != burn::BURN_SOURCE_OK)
     {
         std::cout << "Cannot attach source object to track object\n";
         return -1;
     }
+
+
 
     /*Add a track to a session at specified position*/
     if(burn::burn_session_add_track(session, track, BURN_POS_END) == 0)
@@ -256,7 +270,8 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
         return -1;
     }
 
-    burn_source_free(data_src);
+    burn::burn_source_free(data_src);
+    data_src = NULL;
 
     /*Check disc state*/
     enum burn::burn_disc_status disc_state = burn::burn_disc_get_status(m_drive);
@@ -274,7 +289,9 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
     burn::burn_write_opts_set_multi(burn_options, multi);
     burn::burn_write_opts_set_simulate(burn_options, simulate_burn);
     burn::burn_write_opts_set_underrun_proof(burn_options, underrun_proof);
+    burn::burn_drive_set_speed(m_drive, read_speed, write_speed);
     char reasons[BURN_REASONS_LEN];
+
     if(burn::burn_write_opts_auto_write_type(burn_options, target_disc, reasons, 0) == burn::BURN_WRITE_NONE)
     {
         std::cout << "FATAL: Failed to find a suitable write mode with this media.\n"
@@ -282,8 +299,6 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
                   << reasons << std::endl;
         return -1;
     }
-
-    burn::burn_drive_set_speed(m_drive, read_speed, write_speed);
 
     /*Finally write iso to disc*/
     burn::burn_disc_write(burn_options, target_disc);
@@ -294,11 +309,17 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
     while(burn::burn_drive_get_status(m_drive, &b_progress) != burn::BURN_DRIVE_IDLE)
     {
         if(b_progress.sectors > 0 && b_progress.sector >= 0)
-            progress(1.0 + 100.0 * b_progress.sector / b_progress.sectors);
-
-        sleep(1);
+        {
+            int p = 100.0 * b_progress.sector / b_progress.sectors;
+            std::cout << p << std::endl;
+            progress(p);
+        }
     }
 
+    if(burn::burn_is_aborting(0) > 0)
+    {
+        std::cout << "aborting" << std::endl;
+    }
 
     /*Free all struct*/
     if(burn_options != NULL)
@@ -307,19 +328,19 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
         burn::burn_source_free(fifo_src);
     if(track != NULL)
         burn::burn_track_free(track);
+    if(session != NULL)
+        burn::burn_session_free(session);
     if(target_disc != NULL)
         burn::burn_disc_free(target_disc);
     if(data_src != NULL)
         burn::burn_source_free(data_src);
-    if(session != NULL)
-        burn::burn_session_free(session);
 
     burn::burn_drive_release(m_drive, 1);
 
     return 1;
 }
 
-int Burn::blankDisc(int blank_fast, std::function<void (float)> progress)
+int Burn::blankDisc(int blank_fast, std::function<void(float)> progress)
 {
     int current_profile;
     char name_po[80];
@@ -344,6 +365,10 @@ int Burn::blankDisc(int blank_fast, std::function<void (float)> progress)
     case burn::BURN_DISC_EMPTY:
         std::cout << "No media detected in drive\n";
         return -1;
+    case burn::BURN_DISC_FULL:
+        break;
+    case burn::BURN_DISC_APPENDABLE:
+        break;
     default:
         std::cout << "Unsuitable drive and media state" << std::endl;
         return -1;

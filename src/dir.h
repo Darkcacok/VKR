@@ -19,6 +19,7 @@ public:
     int addChild(Node *node);
     int getSize();
     int deleteChild(Node *node);
+    int indexOf(Node *node);
     Node* getChild(unsigned int n);
 
 private:

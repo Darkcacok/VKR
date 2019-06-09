@@ -14,6 +14,10 @@ class File : public  Node
 public:
     File(const std::string &path);
     ~File();
+
+    // Node interface
+public:
+    int getSize();
 };
 
 }

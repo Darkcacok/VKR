@@ -9,6 +9,7 @@
 #include <string>
 #include "QDebug"
 #include "recordform.h"
+#include "form.h"
 
 #include "fs.h"
 
@@ -43,9 +44,9 @@ int main(int argc, char *argv[])
     /*fs::File *file = new  fs::File(std::string("/home/user/army2018.tar.gz"));
     std::string name = file->getName();
     fs::Dir *dir = new fs::Dir(std::string("/home/user/Diplom"));
-    fs::Dir *dir2 = new fs::Dir(std::string("/home/user/Diplom"));
+    fs::Dir *dir2 = new fs::Dir(std::string("/home"));*/
 
-    dir->addChild(file);
+    /*dir->addChild(file);
     dir->addChild(dir2);
     dir->getParent();
 
@@ -53,6 +54,7 @@ int main(int argc, char *argv[])
     iso.setExtnsnRockRidge();
     iso.CreateImage(dir, std::string("test"));
     iso.writeImage(std::string("/home/user/test.iso"), progress);*/
+
 
 
     CreateImage w;

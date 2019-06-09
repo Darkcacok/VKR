@@ -46,6 +46,17 @@ int fs::Dir::getSize()
     return children.size();
 }
 
+int fs::Dir::indexOf(fs::Node *node)
+{
+    for(int i = 0; i < getSize();++i)
+    {
+        if(children[i] == node)
+            return i;
+    }
+
+    return -1;
+}
+
 fs::Node *fs::Dir::getChild(unsigned int n)
 {
     if(n >= this->getSize())

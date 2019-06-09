@@ -30,6 +30,7 @@ SOURCES += \
         dir.cpp \
         file.cpp \
         isofs.cpp \
+    isoitemtree.cpp \
         main.cpp \
         mainwindow.cpp \
         node.cpp \
@@ -43,6 +44,7 @@ HEADERS += \
         dir.h \
         file.h \
         isofs.h \
+    isoitemtree.h \
         mainwindow.h \
         node.h \
     fs.h \

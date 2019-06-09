@@ -12,3 +12,8 @@ fs::File::~File()
 {
 
 }
+
+int fs::File::getSize()
+{
+    return this->size;
+}

@@ -2,7 +2,7 @@
 #define CREATEIMAGE_H
 
 #include <QWidget>
-#include <QTreeWidget>
+#include <QTreeView>
 #include <QComboBox>
 #include <QPushButton>
 #include <QHBoxLayout>
@@ -25,6 +25,7 @@
 #include "burn.h"
 #include "senddata.h"
 #include "recordform.h"
+#include "isoitemtree.h"
 
 class CreateImage : public QWidget
 {
@@ -37,6 +38,7 @@ public:
 private:
 
     fs::Dir *m_root;
+    IsoItemTree *isoItemTree;
     Burn *burn;
     bool checLabel, checkTree;
 
@@ -60,12 +62,12 @@ private:
 
 
     /*****TreeWidget*************/
-    QTreeWidget *nodes_view;
-    QTreeWidgetItem *top_level_item;
+    QTreeView *nodes_view;
+    //QTreeWidgetItem *top_level_item;
     static const int column = 3;
 
     /***/
-    std::map<QTreeWidgetItem*, fs::Node*> modelView;
+    //std::map<QTreeWidgetItem*, fs::Node*> modelView;
 
 
     /********Support Forms***********/
@@ -73,8 +75,8 @@ private:
 
     /*************Functions******************/
     int createWindow();
-    QTreeWidgetItem *addItem(fs::Node *node);
-    QTreeWidgetItem *addFile(fs::Dir *dir);
+    //QTreeWidgetItem *addItem(fs::Node *node);
+    //QTreeWidgetItem *addFile(fs::Dir *dir);
 
     void driveScan();
 

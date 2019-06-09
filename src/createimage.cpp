@@ -12,6 +12,10 @@ CreateImage::CreateImage(QWidget *parent) :
     connect(recordForm, SIGNAL(sendData(InfoForRecord)), this, SLOT(recieveData(InfoForRecord)));
 
     m_root = new fs::Dir("root");
+    isoItemTree = new IsoItemTree(this);
+    isoItemTree->setRooteNode(m_root);
+    nodes_view->setModel(isoItemTree);
+
     burn = new Burn();
     checLabel = false;
     checkTree = false;
@@ -32,7 +36,7 @@ void CreateImage::driveScan()
     burn->driveScan();
 
     for(int i = 0; i < burn->getDrivesCount(); ++i)
-    {
+    {        
         struct disc_info *di;
         char scales[] = "bkmgtp";
         char scale_c = scales[0];
@@ -40,6 +44,9 @@ void CreateImage::driveScan()
         std::string str;
 
         di = burn->getDiscInfo(i);
+
+        if(di->status == burn::BURN_DISC_EMPTY)
+            continue;
 
         size = di->available_size;
 
@@ -136,11 +143,8 @@ int CreateImage::createWindow()
     choose_disc->addItem(QString("Файл"));
 
     /************TreeWidget****************************/
-    nodes_view = new QTreeWidget();
-    top_level_item = new QTreeWidgetItem();
+    nodes_view = new QTreeView;
 
-    nodes_view->setColumnCount(column);
-    nodes_view->setHeaderLabels(QStringList{"Название", "Тип", "Размер"});
     //nodes_view->viewport()->installEventFilter(this);
     //connect(nodes_view, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(change(const QPoint &)));
     //connect(nodes_view, SIGNAL(itemSelectionChanged()), this, SLOT(change()));
@@ -164,56 +168,6 @@ int CreateImage::createWindow()
     this->setLayout(v_layout);
 }
 
-QTreeWidgetItem *CreateImage::addItem(fs::Node *node)
-{
-    QTreeWidgetItem *item = new QTreeWidgetItem();
-
-    item->setText(0, QString(node->getName().c_str()));
-    switch (node->getType()) {
-    case fs::NodeType::ISO_FILE:
-        item->setIcon(0, QIcon(":/icons/text-x-generic.svg"));
-        item->setText(1, "Файл");
-        item->setText(2, QString::number(node->getSize()) + QString(" байт"));
-        break;
-    case fs::NodeType::ISO_DIR:
-        item->setIcon(0, QIcon(":/icons/folder.svg"));
-        item->setText(1, "Папка");
-        item->setText(2, QString::number(node->getSize()) + QString(" элементов"));
-        break;
-    case fs::NodeType::ISO_SYMLINK:
-        item->setIcon(0, QIcon(":/icons/text-x-generic.svg"));
-        item->setText(1, "Ссылка");
-        item->setText(2, QString::number(node->getSize()) + QString(" байт"));
-        break;
-    }
-
-
-    return item;
-}
-
-QTreeWidgetItem *CreateImage::addFile(fs::Dir *dir)
-{
-    QTreeWidgetItem *item = addItem(dir);
-    modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(item, dir));
-
-    for(int i = 0; i < dir->getSize(); ++i)
-    {
-        fs::Node *node = dir->getChild(i);
-        if(node->getType() == fs::ISO_DIR)
-        {
-            item->addChild(addFile((fs::Dir*)node));
-        }
-        else
-        {
-            QTreeWidgetItem *childItem = new QTreeWidgetItem();
-            childItem = addItem(node);
-            item->addChild(childItem);
-            modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(childItem, node));
-        }
-    }
-
-    return item;
-}
 
 int CreateImage::addFile()
 {
@@ -223,46 +177,11 @@ int CreateImage::addFile()
     if(fileName.isEmpty())
         return -1;
 
-    QTreeWidgetItem *curr_item = nodes_view->currentItem();
-    if(curr_item == NULL)
-    {
-        fs::File *file = new fs::File(fileName.toStdString());
+    QModelIndex curr_item = nodes_view->currentIndex();
+    int ret = isoItemTree->insertRow(curr_item, new fs::Node(fileName.toStdString()));
 
-        if(m_root->addChild(file) < 0)
-        {
-            QMessageBox::information(this, "Внимание", "В этой папке уже есть файл с таким именем: " + QString(file->getName().c_str()));
-            return -1;
-        }
-
-        QTreeWidgetItem *item = addItem(file);
-        modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(item, file));
-        nodes_view->addTopLevelItem(item);
-    }
-    else
-    {
-        fs::File *file = new fs::File(fileName.toStdString());
-        fs::Node *node = modelView[curr_item];
-
-        if(node->getType() != fs::ISO_DIR)
-        {
-            node = node->getParent();
-            curr_item = curr_item->parent();
-        }
-
-        QTreeWidgetItem *item = addItem(file);
-        modelView.insert(std::pair<QTreeWidgetItem*,fs::Node*>(item, file));
-
-        if(((fs::Dir*)node)->addChild(file) < 0)
-        {
-            QMessageBox::information(this, "Внимание", "В этой папке уже есть файл с таким именем: " + QString(file->getName().c_str()));
-            return -1;
-        }
-
-        if(curr_item == NULL)
-            nodes_view->addTopLevelItem(item);
-        else
-            curr_item->addChild(item);
-    }
+    if(ret < 0)
+        QMessageBox::information(this, "Внимание", "В этой папке уже есть файл с таким именем: " + fileName);
 
     if(!checkTree)
     {
@@ -280,40 +199,12 @@ int CreateImage::addDir()
     if(dir.isEmpty())
         return -1;
 
-    QTreeWidgetItem *curr_item = nodes_view->currentItem();
+    QModelIndex curr_item = nodes_view->currentIndex();
     fs::Dir *folder = new fs::Dir(dir.toStdString());
-    if(curr_item == NULL)
-    {
-        if(m_root->addChild(folder) < 0)
-        {
-            QMessageBox::information(this, "Внимание", "В этой папке уже есть папка с таким именем: " + QString(folder->getName().c_str()));
-            return -1;
-        }
+    int ret = isoItemTree->insertRow(curr_item, folder);
 
-        nodes_view->addTopLevelItem(addFile(folder));
-
-    }
-    else
-    {
-        fs::Node *node = modelView[curr_item];
-
-        if(node->getType() != fs::ISO_DIR)
-        {
-            node = node->getParent();
-            curr_item = curr_item->parent();
-        }
-
-        if(((fs::Dir*)node)->addChild(folder) < 0)
-        {
-            QMessageBox::information(this, "Внимание", "В этой папке уже есть папка с таким именем: " + QString(folder->getName().c_str()));
-            return -1;
-        }
-
-        if(curr_item == NULL)
-            nodes_view->addTopLevelItem(addFile(folder));
-        else
-            curr_item->addChild(addFile(folder));
-    }
+    if(ret < 0)
+        QMessageBox::information(this, "Внимание", "В этой папке уже есть папка с таким именем: " + dir);
 
     if(!checkTree)
     {
@@ -325,107 +216,110 @@ int CreateImage::addDir()
 
 int CreateImage::deleteNode()
 {
-    QTreeWidgetItem *item = nodes_view->currentItem();
+//    QTreeWidgetItem *item = nodes_view->currentItem();
 
-    if(item != NULL)
-    {
-        item->~QTreeWidgetItem();
-    }
+//    if(item != NULL)
+//    {
+//        item->~QTreeWidgetItem();
+//    }
 
-    if(m_root->getSize() == 0)
-    {
-        checLabel == false;
+//    if(m_root->getSize() == 0)
+//    {
+//        checLabel == false;
 
-        checkRecord();
-    }
+//        checkRecord();
+//    }
 }
 
 void CreateImage::recordIsoImage()
-{      
-    InfoForRecord ifr;
-    int  choose = choose_disc->currentIndex();
+{
+//    InfoForRecord ifr;
+//    int  choose = choose_disc->currentIndex();
 
-    if(choose == 0)
-        ifr.discPath = "";
-    else
-    {
-        ifr.discPath = burn->getDrivePath(choose-1);
-        struct disc_info *di = burn->getDiscInfo(choose - 1);
+//    if(choose == 0)
+//        ifr.discPath = "";
+//    else
+//    {
+//        ifr.discPath = burn->getDrivePath(choose-1);
+//        struct disc_info *di = burn->getDiscInfo(choose - 1);
 
-        if(di->status == burn::BURN_DISC_FULL)
-        {
-            QMessageBox msgBox;
-            msgBox.setText("Диск полный");
-            msgBox.setInformativeText("Хотите отчистить диск?");
-            msgBox.setStandardButtons(QMessageBox::No | QMessageBox::Yes);
-            int ret = msgBox.exec();
+//        if(di->status == burn::BURN_DISC_FULL)
+//        {
+//            QMessageBox msgBox;
+//            msgBox.setText("Диск полный");
+//            msgBox.setInformativeText("Хотите отчистить диск?");
+//            msgBox.setStandardButtons(QMessageBox::No | QMessageBox::Yes);
+//            int ret = msgBox.exec();
 
 
-            if(ret == QMessageBox::Yes)
-            {
-                if(burn->driveScanAndGrab(di->path_to_disc) < 0)
-                    QMessageBox::information(this, "Ошибка", "Не удалсоь захваить диск");
+//            if(ret == QMessageBox::Yes)
+//            {
+//                if(burn->driveScanAndGrab(di->path_to_disc) < 0)
+//                    QMessageBox::information(this, "Ошибка", "Не удалсоь захваить диск");
 
-                QProgressDialog progress(this);
-                connect(this, SIGNAL(setValue(int)), &progress, SLOT(setValue(int)));
-                progress.setMinimum(0);
-                progress.setMaximum(100);
-                progress.setLabelText("Отчистка Диска");
-                progress.setModal(true);
-                progress.show();
+//                QProgressDialog progress(this);
+//                connect(this, SIGNAL(setValue(int)), &progress, SLOT(setValue(int)));
+//                progress.setMinimum(0);
+//                progress.setMaximum(100);
+//                progress.setLabelText("Отчистка Диска");
+//                progress.setModal(true);
+//                progress.show();
 
-                if(burn->blankDisc(1, [=](float p){
-                    emit setValue(p);
-                }) > 0)
-                {
-                    burn->~Burn();
-                    burn = new Burn();
-                    QtConcurrent::run(this, &CreateImage::driveScan);
-                }
+//                if(burn->blankDisc(1, [=](float p){
+//                    emit setValue(p);
+//                }) > 0)
+//                {
+//                    burn->~Burn();
+//                    burn = new Burn();
+//                    QtConcurrent::run(this, &CreateImage::driveScan);
+//                }
+//                else
+//                {
+//                    QMessageBox::information(this, "Внимание!", "Не удалось отчистить диск!");
+//                }
 
-                return;
-            }
-            else {
-                return;
-            }
+//                return;
+//            }
+//            else {
+//                return;
+//            }
 
-        }
-    }
+//        }
+//    }
 
-    QString Qpath = QFileDialog::getSaveFileName(this, tr("Сохранить образ диска"), "", tr("All Files (*)"));
-    if(Qpath.isEmpty())
-    {
-        return;
-    }
+//    QString Qpath = QFileDialog::getSaveFileName(this, tr("Сохранить образ диска"), "", tr("All Files (*)"));
+//    if(Qpath.isEmpty())
+//    {
+//        return;
+//    }
 
-    ifr.isoPath = Qpath.toStdString();
+//    ifr.isoPath = Qpath.toStdString();
 
-    ifr.imgName = imgNameEdit->text().toStdString();
-    ifr.dir = m_root;
+//    ifr.imgName = imgNameEdit->text().toStdString();
+//    ifr.dir = m_root;
 
-    recordForm->show();
+//    recordForm->show();
 
-    emit sendData(ifr);
+//    emit sendData(ifr);
 }
 
 void CreateImage::change(QPoint &event)
 {
-    int x;
-    x = 2;
+
 }
 
 void CreateImage::labelEdited(const QString &text)
 {
-    if(text.isEmpty())
-    {
-        checLabel = false;
-    }
-    else
-    {
-        checLabel = true;
-    }
+//    if(text.isEmpty())
+//    {
+//        checLabel = false;
+//    }
+//    else
+//    {
+//        checLabel = true;
+//    }
 
-    checkRecord();
+//    checkRecord();
 }
 
 void CreateImage::recieveData(InfoForRecord ifr)
@@ -435,18 +329,18 @@ void CreateImage::recieveData(InfoForRecord ifr)
 
 bool CreateImage::eventFilter(QObject *watched, QEvent *event)
 {
-    if(watched == nodes_view->viewport() && event->type() == QEvent::MouseButtonRelease)
-    {
-        QMouseEvent *me = static_cast<QMouseEvent *>(event);
+//    if(watched == nodes_view->viewport() && event->type() == QEvent::MouseButtonRelease)
+//    {
+//        QMouseEvent *me = static_cast<QMouseEvent *>(event);
 
-        QTreeWidgetItem *item = nodes_view->itemAt(me->pos());
+//        QTreeWidgetItem *item = nodes_view->itemAt(me->pos());
 
-        if(item == NULL)
-        {
-            //nodes_view->currentItem()->setSelected(false);
-            //nodes_view->clearFocus();
-            nodes_view->setCurrentIndex(QModelIndex());
-            //nodes_view->selectionModel()->clearSelection();
-        }
-    }
+//        if(item == NULL)
+//        {
+//            //nodes_view->currentItem()->setSelected(false);
+//            //nodes_view->clearFocus();
+//            nodes_view->setCurrentIndex(QModelIndex());
+//            //nodes_view->selectionModel()->clearSelection();
+//        }
+//    }
 }

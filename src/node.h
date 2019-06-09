@@ -25,15 +25,15 @@ public:
     NodeType getType();
     std::string getPath();
     std::string getName();
-    int getSize();
+    virtual int getSize();
 
 protected:
     void setParent(Node *node);
+    int size;
 
 private:
     std::string path;
     std::string name;
-    int size;
     NodeType type;
     Dir *parent;
 

@@ -7,10 +7,10 @@
 
 #include "fs.h"
 
-class IsoItemTree : public QAbstractItemModel
+class IsoItemTreeModel : public QAbstractItemModel
 {
 public:
-    IsoItemTree(QObject *parent);
+    IsoItemTreeModel(QObject *parent);
 
 
     void setRooteNode(fs::Node *node);

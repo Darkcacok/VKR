@@ -36,9 +36,6 @@ private:
     std::string name;
     NodeType type;
     Dir *parent;
-
-    /*functions*/
-
 };
 }
 #endif // NODE_H

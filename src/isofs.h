@@ -34,6 +34,11 @@ public:
 
     /***********Write image*************************/
     int writeImage(const std::string &file_path, std::function<void(int)> percent);
+
+
+    /*Error*/
+    std::string getLastError();
+
 private:
     int addDir(fs::Dir *dir, IsoDir *isoDir);
 
@@ -43,6 +48,9 @@ private:
     //
     IsoImage *m_image;
     IsoWriteOpts *m_opts;
+
+    /*Error**/
+    std::string strError;
 };
 
 #endif // ISOFS_H

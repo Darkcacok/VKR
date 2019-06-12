@@ -25,7 +25,7 @@
 #include "burn.h"
 #include "senddata.h"
 #include "recordform.h"
-#include "isoitemtree.h"
+#include "isoitemtreemodel.h"
 
 class CreateImage : public QWidget
 {
@@ -38,7 +38,7 @@ public:
 private:
 
     fs::Dir *m_root;
-    IsoItemTree *isoItemTree;
+    IsoItemTreeModel *isoItemTreeModel;
     Burn *burn;
     bool checLabel, checkTree;
 
@@ -55,7 +55,7 @@ private:
     QPushButton *record;
 
     /*******Line Edit*************/
-    QLineEdit *imgNameEdit;
+    QLineEdit *imgNameLineEdit;
 
     /*****Combobox****************/
     QComboBox *choose_disc;
@@ -63,11 +63,7 @@ private:
 
     /*****TreeWidget*************/
     QTreeView *nodes_view;
-    //QTreeWidgetItem *top_level_item;
     static const int column = 3;
-
-    /***/
-    //std::map<QTreeWidgetItem*, fs::Node*> modelView;
 
 
     /********Support Forms***********/
@@ -75,11 +71,8 @@ private:
 
     /*************Functions******************/
     int createWindow();
-    //QTreeWidgetItem *addItem(fs::Node *node);
-    //QTreeWidgetItem *addFile(fs::Dir *dir);
 
     void driveScan();
-
     void checkRecord();
 
 

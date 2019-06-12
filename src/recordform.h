@@ -6,6 +6,7 @@
 #include <QProgressBar>
 #include <QLabel>
 #include <QtConcurrent/QtConcurrent>
+#include <QMessageBox>
 
 #include "senddata.h"
 #include "isofs.h"
@@ -29,9 +30,6 @@ private:
 
     /********Functions*********/
     void createWindow();
-
-    //static void updateProgress(float persent)
-
 
 
 signals:

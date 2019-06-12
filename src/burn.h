@@ -36,11 +36,17 @@ public:
     int writeIso(std::string &iso_path, std::function<void(float)> progress);
     int blankDisc(int blank_fast, std::function<void(float)> progress);
 
+    std::string getLastError();
+
     /******** DEBUG INFO *********/
 
 private:
     std::vector<struct disc_info> m_drives;
+    struct burn::burn_drive_info *m_drive_list;
     struct burn::burn_drive *m_drive;
+
+    /*Errors*/
+    std::string strError;
 
     /*********Burn opts****************/
     int opc; //If non-zero, optical power calibration will be performed at start of burn

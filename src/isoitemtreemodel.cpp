@@ -1,21 +1,21 @@
-#include "isoitemtree.h"
+#include "isoitemtreemodel.h"
 
-const QIcon IsoItemTree::folderIcon = QIcon("../src/icons/folder.svg");
-const QIcon IsoItemTree::fileIcon = QIcon("../src/icons/text-x-generic.svg");
+const QIcon IsoItemTreeModel::folderIcon = QIcon("../src/icons/folder.svg");
+const QIcon IsoItemTreeModel::fileIcon = QIcon("../src/icons/text-x-generic.svg");
 
-IsoItemTree::IsoItemTree(QObject *parent)
+IsoItemTreeModel::IsoItemTreeModel(QObject *parent)
     :QAbstractItemModel(parent)
 {
     rootNode = NULL;
 }
 
-void IsoItemTree::setRooteNode(fs::Node *node)
+void IsoItemTreeModel::setRooteNode(fs::Node *node)
 {
     rootNode = node;
     //reset();
 }
 
-QModelIndex IsoItemTree::index(int row, int column, const QModelIndex &parent) const
+QModelIndex IsoItemTreeModel::index(int row, int column, const QModelIndex &parent) const
 {
     if(!rootNode)
         return QModelIndex();
@@ -24,7 +24,7 @@ QModelIndex IsoItemTree::index(int row, int column, const QModelIndex &parent) c
     return createIndex(row, column, static_cast<fs::Dir*>(parentNode)->getChild(row));
 }
 
-QModelIndex IsoItemTree::parent(const QModelIndex &child) const
+QModelIndex IsoItemTreeModel::parent(const QModelIndex &child) const
 {
     fs::Node *node = nodeFromeIndex(child);
 
@@ -44,7 +44,7 @@ QModelIndex IsoItemTree::parent(const QModelIndex &child) const
     return createIndex(row, child.column(), parentNode);
 }
 
-int IsoItemTree::rowCount(const QModelIndex &parent) const
+int IsoItemTreeModel::rowCount(const QModelIndex &parent) const
 {
     fs::Node *parentNode = nodeFromeIndex(parent);
 
@@ -58,12 +58,12 @@ int IsoItemTree::rowCount(const QModelIndex &parent) const
     }
 }
 
-int IsoItemTree::columnCount(const QModelIndex &parent) const
+int IsoItemTreeModel::columnCount(const QModelIndex &parent) const
 {
     return 3;
 }
 
-QVariant IsoItemTree::data(const QModelIndex &index, int role) const
+QVariant IsoItemTreeModel::data(const QModelIndex &index, int role) const
 {
     fs::Node *node = nodeFromeIndex(index);
 
@@ -177,7 +177,7 @@ check:
     }
 }
 
-fs::Node *IsoItemTree::nodeFromeIndex(const QModelIndex &index) const
+fs::Node *IsoItemTreeModel::nodeFromeIndex(const QModelIndex &index) const
 {
     if(index.isValid())
     {
@@ -188,7 +188,7 @@ fs::Node *IsoItemTree::nodeFromeIndex(const QModelIndex &index) const
     }
 }
 
-int IsoItemTree::insertRow(const QModelIndex &index, fs::Node *node)
+int IsoItemTreeModel::insertRow(const QModelIndex &index, fs::Node *node)
 {
     if(index.isValid())
     {
@@ -235,7 +235,7 @@ int IsoItemTree::insertRow(const QModelIndex &index, fs::Node *node)
 }
 
 
-QVariant IsoItemTree::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant IsoItemTreeModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
         if (section == 0) {

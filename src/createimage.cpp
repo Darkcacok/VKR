@@ -12,9 +12,9 @@ CreateImage::CreateImage(QWidget *parent) :
     connect(recordForm, SIGNAL(sendData(InfoForRecord)), this, SLOT(recieveData(InfoForRecord)));
 
     m_root = new fs::Dir("root");
-    isoItemTree = new IsoItemTree(this);
-    isoItemTree->setRooteNode(m_root);
-    nodes_view->setModel(isoItemTree);
+    isoItemTreeModel = new IsoItemTreeModel(this);
+    isoItemTreeModel->setRooteNode(m_root);
+    nodes_view->setModel(isoItemTreeModel);
 
     burn = new Burn();
     checLabel = false;
@@ -135,9 +135,9 @@ int CreateImage::createWindow()
     connect(delete_node, SIGNAL(clicked()), this, SLOT(deleteNode()));
     connect(record, SIGNAL(clicked()), this, SLOT(recordIsoImage()));
 
-    imgNameEdit = new QLineEdit();
-    imgNameEdit->setPlaceholderText("Название Образа");
-    connect(imgNameEdit, SIGNAL(textEdited(const QString&)), this, SLOT(labelEdited(const QString&)));
+    imgNameLineEdit = new QLineEdit();
+    imgNameLineEdit->setPlaceholderText("Название Образа");
+    connect(imgNameLineEdit, SIGNAL(textEdited(const QString&)), this, SLOT(labelEdited(const QString&)));
 
     choose_disc = new QComboBox();
     choose_disc->addItem(QString("Файл"));
@@ -160,7 +160,7 @@ int CreateImage::createWindow()
 
     v_layout->addLayout(h_layout_top);
     v_layout->addWidget(nodes_view);
-    v_layout->addWidget(imgNameEdit);
+    v_layout->addWidget(imgNameLineEdit);
     v_layout->addLayout(h_layout_buttom);
 
 
@@ -178,7 +178,7 @@ int CreateImage::addFile()
         return -1;
 
     QModelIndex curr_item = nodes_view->currentIndex();
-    int ret = isoItemTree->insertRow(curr_item, new fs::Node(fileName.toStdString()));
+    int ret = isoItemTreeModel->insertRow(curr_item, new fs::Node(fileName.toStdString()));
 
     if(ret < 0)
         QMessageBox::information(this, "Внимание", "В этой папке уже есть файл с таким именем: " + fileName);
@@ -201,7 +201,7 @@ int CreateImage::addDir()
 
     QModelIndex curr_item = nodes_view->currentIndex();
     fs::Dir *folder = new fs::Dir(dir.toStdString());
-    int ret = isoItemTree->insertRow(curr_item, folder);
+    int ret = isoItemTreeModel->insertRow(curr_item, folder);
 
     if(ret < 0)
         QMessageBox::information(this, "Внимание", "В этой папке уже есть папка с таким именем: " + dir);
@@ -233,74 +233,74 @@ int CreateImage::deleteNode()
 
 void CreateImage::recordIsoImage()
 {
-//    InfoForRecord ifr;
-//    int  choose = choose_disc->currentIndex();
+    InfoForRecord ifr;
+    int  choose = choose_disc->currentIndex();
 
-//    if(choose == 0)
-//        ifr.discPath = "";
-//    else
-//    {
-//        ifr.discPath = burn->getDrivePath(choose-1);
-//        struct disc_info *di = burn->getDiscInfo(choose - 1);
+    if(choose == 0)
+        ifr.discPath = "";
+    else
+    {
+        ifr.discPath = burn->getDrivePath(choose-1);
+        struct disc_info *di = burn->getDiscInfo(choose - 1);
 
-//        if(di->status == burn::BURN_DISC_FULL)
-//        {
-//            QMessageBox msgBox;
-//            msgBox.setText("Диск полный");
-//            msgBox.setInformativeText("Хотите отчистить диск?");
-//            msgBox.setStandardButtons(QMessageBox::No | QMessageBox::Yes);
-//            int ret = msgBox.exec();
+        if(di->status == burn::BURN_DISC_FULL)
+        {
+            QMessageBox msgBox;
+            msgBox.setText("Диск полный");
+            msgBox.setInformativeText("Хотите отчистить диск?");
+            msgBox.setStandardButtons(QMessageBox::No | QMessageBox::Yes);
+            int ret = msgBox.exec();
 
 
-//            if(ret == QMessageBox::Yes)
-//            {
-//                if(burn->driveScanAndGrab(di->path_to_disc) < 0)
-//                    QMessageBox::information(this, "Ошибка", "Не удалсоь захваить диск");
+            if(ret == QMessageBox::Yes)
+            {
+                if(burn->driveScanAndGrab(di->path_to_disc) < 0)
+                    QMessageBox::information(this, "Ошибка", "Не удалсоь захваить диск");
 
-//                QProgressDialog progress(this);
-//                connect(this, SIGNAL(setValue(int)), &progress, SLOT(setValue(int)));
-//                progress.setMinimum(0);
-//                progress.setMaximum(100);
-//                progress.setLabelText("Отчистка Диска");
-//                progress.setModal(true);
-//                progress.show();
+                QProgressDialog progress(this);
+                connect(this, SIGNAL(setValue(int)), &progress, SLOT(setValue(int)));
+                progress.setMinimum(0);
+                progress.setMaximum(100);
+                progress.setLabelText("Отчистка Диска");
+                progress.setModal(true);
+                progress.show();
 
-//                if(burn->blankDisc(1, [=](float p){
-//                    emit setValue(p);
-//                }) > 0)
-//                {
-//                    burn->~Burn();
-//                    burn = new Burn();
-//                    QtConcurrent::run(this, &CreateImage::driveScan);
-//                }
-//                else
-//                {
-//                    QMessageBox::information(this, "Внимание!", "Не удалось отчистить диск!");
-//                }
+                if(burn->blankDisc(1, [=](float p){
+                    emit setValue(p);
+                }) > 0)
+                {
+                    burn->~Burn();
+                    burn = new Burn();
+                    QtConcurrent::run(this, &CreateImage::driveScan);
+                }
+                else
+                {
+                    QMessageBox::information(this, "Внимание!", "Не удалось отчистить диск!");
+                }
 
-//                return;
-//            }
-//            else {
-//                return;
-//            }
+                return;
+            }
+            else {
+                return;
+            }
 
-//        }
-//    }
+        }
+    }
 
-//    QString Qpath = QFileDialog::getSaveFileName(this, tr("Сохранить образ диска"), "", tr("All Files (*)"));
-//    if(Qpath.isEmpty())
-//    {
-//        return;
-//    }
+    QString Qpath = QFileDialog::getSaveFileName(this, tr("Сохранить образ диска"), "", tr("All Files (*)"));
+    if(Qpath.isEmpty())
+    {
+        return;
+    }
 
-//    ifr.isoPath = Qpath.toStdString();
+    ifr.isoPath = Qpath.toStdString();
 
-//    ifr.imgName = imgNameEdit->text().toStdString();
-//    ifr.dir = m_root;
+    ifr.imgName = imgNameLineEdit->text().toStdString();
+    ifr.dir = m_root;
 
-//    recordForm->show();
+    recordForm->show();
 
-//    emit sendData(ifr);
+    emit sendData(ifr);
 }
 
 void CreateImage::change(QPoint &event)
@@ -310,16 +310,16 @@ void CreateImage::change(QPoint &event)
 
 void CreateImage::labelEdited(const QString &text)
 {
-//    if(text.isEmpty())
-//    {
-//        checLabel = false;
-//    }
-//    else
-//    {
-//        checLabel = true;
-//    }
+    if(text.isEmpty())
+    {
+        checLabel = false;
+    }
+    else
+    {
+        checLabel = true;
+    }
 
-//    checkRecord();
+    checkRecord();
 }
 
 void CreateImage::recieveData(InfoForRecord ifr)

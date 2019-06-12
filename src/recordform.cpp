@@ -51,11 +51,17 @@ void RecordForm::recordImgae(InfoForRecord ifr)
     IsoFS * isoFs = new IsoFS();
     isoFs->setExtnsnRockRidge();
     isoFs->CreateImage(ifr.dir, ifr.imgName);
-    isoFs->writeImage(ifr.isoPath, [=](float p){
+    ret = isoFs->writeImage(ifr.isoPath, [=](float p){
         emit setValue(p);
     });
 
-    if(stages == 2)
+    if(ret < 0)
+    {
+        QMessageBox::information(this, "Ошибка", isoFs->getLastError().c_str());
+        close();
+    }
+
+    if(stages == 2 && ret > 0)
     {
         emit setText("Запись образа на диск (" + QString::number(++currentStage) + "/" + QString::number(stages) + ")");
         emit setValue(0);
@@ -65,11 +71,20 @@ void RecordForm::recordImgae(InfoForRecord ifr)
     }
 
 
-    if(ret > 0)
+    if(stages == 2)
     {
         burn->~Burn();
-        close();
     }
+    if(ret > 0)
+    {
+        QMessageBox::information(this, "Успех", "Образ успешно записан");
+    }
+    else
+    {
+        QMessageBox::information(this, "Ошибка", burn->getLastError().c_str());
+    }
+
+    close();
 }
 
 

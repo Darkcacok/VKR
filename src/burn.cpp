@@ -6,6 +6,7 @@ Burn::Burn()
         throw "error init";
 
     m_drive = NULL;
+    m_drive_list = NULL;
     opc = 0;
     multi = 0;
     simulate_burn = 0;
@@ -18,6 +19,8 @@ Burn::~Burn()
 {
     if(m_drive != NULL)
         burn::burn_drive_release(m_drive, 0);
+    if(m_drive_list != NULL)
+        burn::burn_drive_info_free(m_drive_list);
     burn::burn_finish();
 }
 
@@ -41,6 +44,8 @@ int Burn::driveScan()
         if(burn::burn_drive_d_get_adr(drive_list[i].drive, adr) <= 0)
         {
             std::cout << "ERROR: " << "burn_drive_d_get_adr" << std::endl;
+            strError = "ERROR: burn_drive_d_get_adr";
+            return -1;
         }
 
         di.path_to_disc = adr;
@@ -48,13 +53,19 @@ int Burn::driveScan()
         if(!burn::burn_drive_grab(drive_list[i].drive, 1))
         {
             std::cout << "ERROR: " << "burn_drive_grab" << std::endl;
+            strError = "ERROR: burn_drive_grab";
+            return -1;
         }
         else
         {
             di.status = burn::burn_disc_get_status(drive_list[i].drive);
 
             if(!burn::burn_disc_get_profile(drive_list[i].drive, &di.profile_no, di.profile_name))
+            {
                 std::cout << "ERROR: " << "burn_drive_get_profile" << std::endl;
+                strError = "ERROR: burn_drive_get_profile";
+                return -1;
+            }
 
             if(burn::burn_disc_get_multi_caps(drive_list[i].drive, burn::BURN_WRITE_NONE, &caps, 0) > 0)
             {
@@ -96,13 +107,15 @@ int Burn::driveScanAndGrab(std::string &device_addr)
     if(m_drive != NULL)
         burn::burn_drive_release(m_drive, 0);
 
-    struct burn::burn_drive_info *drive_list;
     int ret;
 
-    ret = burn::burn_drive_scan_and_grab(&drive_list, strdup(device_addr.c_str()), 1);
+    ret = burn::burn_drive_scan_and_grab(&m_drive_list, strdup(device_addr.c_str()), 1);
 
     if(ret <= 0)
+    {
+        strError = "Не удалось захватить устройство по адрессу: " + device_addr;
         return -1;
+    }
 
 
     char adr[BURN_DRIVE_ADR_LEN];
@@ -110,20 +123,26 @@ int Burn::driveScanAndGrab(std::string &device_addr)
     struct burn::burn_write_opts *o = NULL;
     struct disc_info di;
 
-    if(burn::burn_drive_d_get_adr(drive_list[0].drive, adr) <= 0)
+    if(burn::burn_drive_d_get_adr(m_drive_list[0].drive, adr) <= 0)
     {
         std::cout << "ERROR: " << "burn_drive_d_get_adr" << std::endl;
+        strError = "ERROR: burn_drive_d_get_adr";
+        return -1;
     }
 
 
-    di.status = burn::burn_disc_get_status(drive_list[0].drive);
+    di.status = burn::burn_disc_get_status(m_drive_list[0].drive);
 
-    if(!burn::burn_disc_get_profile(drive_list[0].drive, &di.profile_no, di.profile_name))
-        std::cout << "ERROR: " << "burn_drive_get_profile" << std::endl;
-
-    if(burn::burn_disc_get_multi_caps(drive_list[0].drive, burn::BURN_WRITE_NONE, &caps, 0) > 0)
+    if(!burn::burn_disc_get_profile(m_drive_list[0].drive, &di.profile_no, di.profile_name))
     {
-        o = burn::burn_write_opts_new(drive_list[0].drive);
+        std::cout << "ERROR: " << "burn_drive_get_profile" << std::endl;
+        strError = "ERROR: burn_drive_get_profile";
+        return -1;
+    }
+
+    if(burn::burn_disc_get_multi_caps(m_drive_list[0].drive, burn::BURN_WRITE_NONE, &caps, 0) > 0)
+    {
+        o = burn::burn_write_opts_new(m_drive_list[0].drive);
         if(o != NULL)
         {
             burn::burn_write_opts_set_perform_opc(o, 0);
@@ -138,16 +157,14 @@ int Burn::driveScanAndGrab(std::string &device_addr)
             }
         }
 
-        di.available_size = burn::burn_disc_available_space(drive_list[0].drive, 0);
+        di.available_size = burn::burn_disc_available_space(m_drive_list[0].drive, 0);
 
         burn::burn_disc_free_multi_caps(&caps);
         if(o != NULL)
             burn::burn_write_opts_free(o);
     }
 
-    m_drive = drive_list[0].drive;
-
-    //burn::burn_drive_info_free(drive_list);//?
+    m_drive = m_drive_list[0].drive;
 
     return 1;
 }
@@ -200,19 +217,20 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
             else
             {
                 std::cout << "ERROR: " << iso_path << "is not real file" << std::endl;
+                strError = iso_path + " не является файлом";
                 return -1;
             }
 
         }
         else
         {
-            /*Error fstat*/
+            strError = "ERROR: fstat";
             return -1;
         }
     }
     else
     {
-        /*Error open*/
+        strError = "Не удалсоь открыть файл по адрессу: " + iso_path;
         return -1;
     }
 
@@ -241,6 +259,7 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
     if (data_src == NULL)
     {
         std::cout << "Could not open data source " << iso_path << std::endl;
+        strError = "Не удалсоь открыть файл по адрессу: " + iso_path;
         return -1;
     }
 
@@ -250,6 +269,7 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
     {
         std::cout << "Could not create fifo object of 4 MB\n"
                   << iso_path << std::endl;
+        strError = "Не удалсоь открыть создать объект fifo в 4 Мбайт: " + iso_path;
         return -1;
     }
 
@@ -258,6 +278,7 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
     if (burn::burn_track_set_source(track, fifo_src) != burn::BURN_SOURCE_OK)
     {
         std::cout << "Cannot attach source object to track object\n";
+        strError = "Не удалсоь прикрепить данные к трэку";
         return -1;
     }
 
@@ -267,6 +288,7 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
     if(burn::burn_session_add_track(session, track, BURN_POS_END) == 0)
     {
         std::cout << "Error" << std::endl;
+        strError = "Не удалсоь добавить трэк к сессии";
         return -1;
     }
 
@@ -277,6 +299,7 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
     enum burn::burn_disc_status disc_state = burn::burn_disc_get_status(m_drive);
     if(disc_state != burn::BURN_DISC_BLANK && disc_state != burn::BURN_DISC_APPENDABLE)
     {
+        strError = "Диск не пустой";
         return -1;
     }
 
@@ -297,6 +320,7 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
         std::cout << "FATAL: Failed to find a suitable write mode with this media.\n"
                   << "Reasons given:" << std::endl
                   << reasons << std::endl;
+        strError = "Не удалось найти подходящий режим записи для этого диска. Причина: " + std::string(reasons);
         return -1;
     }
 
@@ -361,9 +385,11 @@ int Burn::blankDisc(int blank_fast, std::function<void(float)> progress)
     {
     case burn::BURN_DISC_BLANK:
         std::cout << "Media already blank" << std::endl;
-        return 2;
+        strError = "Диск уже пустой";
+        return -1;
     case burn::BURN_DISC_EMPTY:
         std::cout << "No media detected in drive\n";
+        strError = "В CD-ROM нет диска";
         return -1;
     case burn::BURN_DISC_FULL:
         break;
@@ -371,11 +397,13 @@ int Burn::blankDisc(int blank_fast, std::function<void(float)> progress)
         break;
     default:
         std::cout << "Unsuitable drive and media state" << std::endl;
+        strError = "Не подходящий состояние диска";
         return -1;
     }
 
     if(!burn::burn_disc_erasable(m_drive)) {
         std::cout << "Media is not of erasable type" << std::endl;
+        strError = "Диск не может быть отчищен";
         return -1;
     }
 
@@ -392,5 +420,10 @@ int Burn::blankDisc(int blank_fast, std::function<void(float)> progress)
     }
 
     return 1;
+}
+
+std::string Burn::getLastError()
+{
+    return strError;
 }
 

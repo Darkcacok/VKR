@@ -15,6 +15,8 @@ IsoFS::IsoFS()
 
 IsoFS::~IsoFS()
 {
+    iso_image_unref(m_image);
+    iso_write_opts_free(m_opts);
     iso_finish();
 }
 
@@ -42,25 +44,10 @@ int IsoFS::CreateImage(fs::Dir *dir, const std::string name)
 
     ret = iso_image_new(name.c_str(), &m_image);
     if(ret < 0)
-        return ret;
-
-   /* for(int i = 0; i < dir->getSize(); ++i)
     {
-        fs::Node *node = dir->getChild(i);
-
-        switch(node->getType())
-        {
-        case fs::NodeType::ISO_FILE:
-            iso_tree_add_node(m_image, iso_image_get_root(m_image), node->getPath().c_str(), NULL);
-            break;
-        case fs::NodeType::ISO_DIR:
-            IsoDir *dir;
-            //iso_tree_add_new_dir(iso_image_get_root(m_image), node->getName().c_str(), &dir);
-            iso_image_add_new_dir(m_image, iso_image_get_root(m_image), node->getName().c_str(), &dir);
-            //iso_tree_add_dir_rec(m_image, dir, node->getPath().c_str());
-            break;
-        }
-    }*/
+        strError = "Не удалсоь создать образ";
+        return ret;
+    }
 
     addDir(dir, iso_image_get_root(m_image));
 
@@ -97,6 +84,7 @@ int IsoFS::writeImage(const std::string &file_path, std::function<void(int)> per
 
     if(iso_image_create_burn_source(m_image, m_opts, &burn_src) < 0)
     {
+        strError = "Не удалсоь создать образ";
         return -1;
     }
 
@@ -107,6 +95,7 @@ int IsoFS::writeImage(const std::string &file_path, std::function<void(int)> per
 
     if(iso_size == 0)
     {
+        strError = "Размер образа равен нулю";
         return -1;
     }
 
@@ -118,8 +107,15 @@ int IsoFS::writeImage(const std::string &file_path, std::function<void(int)> per
         printf("%f\n", (progress * 100.0)/iso_size);
         percent((progress * 100.0)/iso_size);
     }
-
     iso_file.close();
 
+    burn_src->free_data(burn_src);
+    free(burn_src);
+
     return 1;
+}
+
+std::string IsoFS::getLastError()
+{
+    return strError;
 }

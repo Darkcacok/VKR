@@ -26,7 +26,6 @@ private:
     std::vector<Node*> children;
 
 
-    /*functions*/
     bool findClone(Node *node);
 };
 

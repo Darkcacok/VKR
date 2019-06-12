@@ -29,6 +29,12 @@ fs::Dir::Dir(const std::string &path) : Node(path)
 
 }
 
+fs::Dir::~Dir()
+{
+    for(int i = 0; i < getSize(); ++i)
+        children[i]->~Node();
+}
+
 
 int fs::Dir::addChild(fs::Node *node)
 {

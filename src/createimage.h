@@ -73,6 +73,7 @@ private:
     int createWindow();
 
     void driveScan();
+
     void checkRecord();
 
 

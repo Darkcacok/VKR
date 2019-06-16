@@ -13,7 +13,7 @@ public:
     IsoItemTreeModel(QObject *parent);
 
 
-    void setRooteNode(fs::Node *node);
+    void setRooteNode(fs::Dir *node);
 
     // QAbstractItemModel interface
 public:
@@ -26,9 +26,10 @@ public:
     fs::Node *nodeFromeIndex(const QModelIndex &index) const;
 
     int insertRow(const QModelIndex &index, fs::Node *node);
+    int deleteRow(const QModelIndex &index);
 
 private:
-    fs::Node *rootNode;
+    fs::Dir *rootNode;
 
 
     /*Icon*/

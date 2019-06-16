@@ -2,7 +2,9 @@
 #define DIR_H
 
 #include <vector>
+#include <list>
 #include <string>
+#include <algorithm>
 #include <dirent.h>
 
 #include "constants.h"
@@ -23,7 +25,7 @@ public:
     Node* getChild(unsigned int n);
 
 private:
-    std::vector<Node*> children;
+    std::list<Node*> children;
 
 
     bool findClone(Node *node);

@@ -18,7 +18,7 @@ class Node
 {
 public:
     Node();
-    ~Node();
+    virtual ~Node();
     Node(const std::string &path);
 
     Dir *getParent();

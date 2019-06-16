@@ -5,6 +5,7 @@ RecordForm::RecordForm(QWidget *parent) : QDialog(parent)
     createWindow();
     connect(this, SIGNAL(setValue(int)), progressBar, SLOT(setValue(int)));
     connect(this, SIGNAL(setText(QString)), status, SLOT(setText(QString)));
+    connect(this, SIGNAL(sendRez(QString)), this, SLOT(recieveRez(QString)));
 }
 
 RecordForm::~RecordForm()
@@ -57,8 +58,8 @@ void RecordForm::recordImgae(InfoForRecord ifr)
 
     if(ret < 0)
     {
-        QMessageBox::information(this, "Ошибка", isoFs->getLastError().c_str());
-        close();
+        emit sendRez(QString(isoFs->getLastError().c_str()));
+        isoFs->~IsoFS();
     }
 
     if(stages == 2 && ret > 0)
@@ -77,18 +78,22 @@ void RecordForm::recordImgae(InfoForRecord ifr)
     }
     if(ret > 0)
     {
-        QMessageBox::information(this, "Успех", "Образ успешно записан");
+        emit sendRez(QString("Образ успешно записан"));
     }
     else
     {
-        QMessageBox::information(this, "Ошибка", burn->getLastError().c_str());
+        emit sendRez(QString(burn->getLastError().c_str()));
     }
-
-    close();
 }
 
 
 void RecordForm::recieveData(InfoForRecord ifr)
 {
     QtConcurrent::run(this, &RecordForm::recordImgae, ifr);
+}
+
+void RecordForm::recieveRez(QString status)
+{
+    QMessageBox::information(this, "Внимание", status);
+    close();
 }

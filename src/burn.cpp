@@ -360,6 +360,7 @@ int Burn::writeIso(std::string &iso_path, std::function<void(float)> progress)
         burn::burn_source_free(data_src);
 
     burn::burn_drive_release(m_drive, 1);
+    m_drive = NULL;
 
     return 1;
 }

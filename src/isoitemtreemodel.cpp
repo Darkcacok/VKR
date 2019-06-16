@@ -9,7 +9,7 @@ IsoItemTreeModel::IsoItemTreeModel(QObject *parent)
     rootNode = NULL;
 }
 
-void IsoItemTreeModel::setRooteNode(fs::Node *node)
+void IsoItemTreeModel::setRooteNode(fs::Dir *node)
 {
     rootNode = node;
     //reset();
@@ -26,7 +26,23 @@ QModelIndex IsoItemTreeModel::index(int row, int column, const QModelIndex &pare
 
 QModelIndex IsoItemTreeModel::parent(const QModelIndex &child) const
 {
-    fs::Node *node = nodeFromeIndex(child);
+    if(!child.isValid())
+        return QModelIndex();
+
+    fs::Node *childItem = static_cast<fs::Node*>(child.internalPointer());
+    if(!childItem)
+        return QModelIndex();
+
+    fs::Node *parentItem = childItem->getParent();
+    if(!parentItem)
+        return QModelIndex();
+
+    if(parentItem == rootNode)
+        return QModelIndex();
+
+    return createIndex(parentItem->getParent()->indexOf(parentItem), 0, parentItem);
+
+    /*fs::Node *node = nodeFromeIndex(child);
 
     if(!node)
         return QModelIndex();
@@ -35,13 +51,13 @@ QModelIndex IsoItemTreeModel::parent(const QModelIndex &child) const
     if(!parentNode)
         return QModelIndex();
 
-    fs::Dir *grandparentNode = parentNode->getParent();
-    if(!grandparentNode)
+    fs::Dir *grandParentNode = parentNode->getParent();
+    if(!grandParentNode)
         return QModelIndex();
 
-    int row  = grandparentNode->indexOf(parentNode);
+    int row  = grandParentNode->indexOf(parentNode);
 
-    return createIndex(row, child.column(), parentNode);
+    return createIndex(row, 0, parentNode);*/
 }
 
 int IsoItemTreeModel::rowCount(const QModelIndex &parent) const
@@ -145,7 +161,7 @@ check:
                 scale_c = scales[i];
             }
 
-            char buf[4];
+            char buf[7];
             sprintf(buf, "%.2f", size);
             str += buf;
 
@@ -197,7 +213,7 @@ int IsoItemTreeModel::insertRow(const QModelIndex &index, fs::Node *node)
         if(currentNode->getType() == fs::ISO_DIR)
         {
 
-            beginInsertRows(index, static_cast<fs::Dir*>(currentNode)->getSize(), static_cast<fs::Dir*>(currentNode)->getSize());
+            beginInsertRows(index.siblingAtColumn(0), static_cast<fs::Dir*>(currentNode)->getSize(), static_cast<fs::Dir*>(currentNode)->getSize());
             int ret = static_cast<fs::Dir*>(currentNode)->addChild(node);
 
             if(ret < 0)
@@ -209,21 +225,34 @@ int IsoItemTreeModel::insertRow(const QModelIndex &index, fs::Node *node)
         {
             fs::Dir *dir = currentNode->getParent();
 
-            beginInsertRows(index.parent(), dir->getSize() - 1, dir->getSize() - 1);
+            if(dir->getParent() == NULL)
+            {
+                beginInsertRows(QModelIndex(), dir->getSize(), dir->getSize());
 
-            int ret = dir->addChild(node);
+                int ret = dir->addChild(node);
 
-            if(ret < 0)
-                return -1;
+                if(ret < 0)
+                    return -1;
 
-            endInsertRows();
+                endInsertRows();
+            }
+            else {
+                beginInsertRows(index.siblingAtColumn(0).parent(), dir->getSize(), dir->getSize());
+
+                int ret = dir->addChild(node);
+
+                if(ret < 0)
+                    return -1;
+
+                endInsertRows();
+            }
         }
     }
     else
     {
-        beginInsertRows(QModelIndex(), ((fs::Dir*)rootNode)->getSize(), ((fs::Dir*)rootNode)->getSize());
+        beginInsertRows(QModelIndex(), rootNode->getSize(), rootNode->getSize());
 
-        int ret = ((fs::Dir*)rootNode)->addChild(node);
+        int ret = rootNode->addChild(node);
 
         if(ret < 0)
             return -1;
@@ -232,6 +261,22 @@ int IsoItemTreeModel::insertRow(const QModelIndex &index, fs::Node *node)
     }
 
     return 1;
+}
+
+int IsoItemTreeModel::deleteRow(const QModelIndex &index)
+{
+    if(index.isValid())
+    {
+        fs::Node *node = nodeFromeIndex(index);
+
+        fs::Dir *dir = node->getParent();
+
+        beginRemoveRows(index.parent(), dir->indexOf(node), dir->indexOf(node));
+        dir->deleteChild(node);
+        endRemoveRows();
+    }
+
+    return 0;
 }
 
 

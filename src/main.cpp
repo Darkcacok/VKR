@@ -42,8 +42,14 @@ int main(int argc, char *argv[])
 
     /*fs::File *file = new  fs::File(std::string("/home/user/army2018.tar.gz"));
     std::string name = file->getName();
-    fs::Dir *dir = new fs::Dir(std::string("/home/user/Diplom"));
-    fs::Dir *dir2 = new fs::Dir(std::string("/home"));*/
+    fs::Dir *dir = new fs::Dir(std::string("/home/user/Diplom"));*/
+
+    /*fs::Dir *dir2 = new fs::Dir(std::string("/home/comp/untitled1"));
+    dir2->addChild(dir1);
+    delete dir2;
+    dir2 = NULL;
+
+    int x = 5;*/
 
     /*dir->addChild(file);
     dir->addChild(dir2);

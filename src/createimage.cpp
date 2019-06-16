@@ -17,11 +17,10 @@ CreateImage::CreateImage(QWidget *parent) :
     nodes_view->setModel(isoItemTreeModel);
 
     burn = new Burn();
-    checLabel = false;
-    checkTree = false;
-
     QtConcurrent::run(this, &CreateImage::driveScan);
 
+    checLabel = false;
+    checkTree = false;
 }
 
 void CreateImage::driveScan()
@@ -59,7 +58,7 @@ void CreateImage::driveScan()
         }
 
         str = di->profile_name;
-        char buf[4];
+        char buf[7];
         sprintf(buf, "%.2f", size);
         str += ": " + std::string(buf);
 
@@ -144,8 +143,7 @@ int CreateImage::createWindow()
 
     /************TreeWidget****************************/
     nodes_view = new QTreeView;
-
-    //nodes_view->viewport()->installEventFilter(this);
+    nodes_view->viewport()->installEventFilter(this);
     //connect(nodes_view, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(change(const QPoint &)));
     //connect(nodes_view, SIGNAL(itemSelectionChanged()), this, SLOT(change()));
 
@@ -216,19 +214,9 @@ int CreateImage::addDir()
 
 int CreateImage::deleteNode()
 {
-//    QTreeWidgetItem *item = nodes_view->currentItem();
+    QModelIndex curr_item = nodes_view->currentIndex();
 
-//    if(item != NULL)
-//    {
-//        item->~QTreeWidgetItem();
-//    }
-
-//    if(m_root->getSize() == 0)
-//    {
-//        checLabel == false;
-
-//        checkRecord();
-//    }
+    isoItemTreeModel->deleteRow(curr_item);
 }
 
 void CreateImage::recordIsoImage()
@@ -329,18 +317,20 @@ void CreateImage::recieveData(InfoForRecord ifr)
 
 bool CreateImage::eventFilter(QObject *watched, QEvent *event)
 {
-//    if(watched == nodes_view->viewport() && event->type() == QEvent::MouseButtonRelease)
-//    {
-//        QMouseEvent *me = static_cast<QMouseEvent *>(event);
+    if(watched == nodes_view->viewport() && event->type() == QEvent::MouseButtonRelease)
+    {
+        QMouseEvent *me = static_cast<QMouseEvent *>(event);
 
-//        QTreeWidgetItem *item = nodes_view->itemAt(me->pos());
+        QModelIndex index = nodes_view->indexAt(me->pos());
 
-//        if(item == NULL)
-//        {
-//            //nodes_view->currentItem()->setSelected(false);
-//            //nodes_view->clearFocus();
-//            nodes_view->setCurrentIndex(QModelIndex());
-//            //nodes_view->selectionModel()->clearSelection();
-//        }
-//    }
+        if(!index.isValid())
+        {
+            //nodes_view->currentItem()->setSelected(false);
+            //nodes_view->clearFocus();
+            nodes_view->clearSelection();
+            nodes_view->selectionModel()->setCurrentIndex(index, QItemSelectionModel::Select);
+            //nodes_view->selectionModel()->clearSelection();
+            //nodes_view->clearFocus();
+        }
+    }
 }

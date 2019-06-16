@@ -36,9 +36,11 @@ signals:
     void sendData(InfoForRecord ifr);
     void setValue(int);
     void setText(QString);
+    void sendRez(QString status);
 
 public slots:
     void recieveData(InfoForRecord ifr);
+    void recieveRez(QString status);
 };
 
 #endif // RECORDFORM_H

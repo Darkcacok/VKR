@@ -84,7 +84,7 @@ int Burn::driveScan()
                     }
                 }
 
-                di.available_size = burn::burn_disc_available_space(drive_list[i].drive, 0);
+                di.available_size = burn::burn_disc_available_space(drive_list[i].drive, o);
 
                 burn::burn_disc_free_multi_caps(&caps);
                 if(o != NULL)
